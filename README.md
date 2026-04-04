@@ -80,7 +80,7 @@ bun run start    # Start production server
 ```
 src/
   index.tsx          # Server entry — Vite middleware, frontend serving, editor integration
-  app.ts             # Elysia app — API routes (auth, hello, health, Google OAuth)
+  app.ts             # Elysia app — API routes (auth, admin, hello, health, Google OAuth)
   serve.ts           # Dev entry (workaround for Bun EADDRINUSE)
   vite.ts            # Vite dev server config, inspector plugin, dedupe plugin
   frontend.tsx       # React entry — root render, splash removal, HMR
@@ -91,15 +91,18 @@ src/
     App.tsx           # Root component — MantineProvider, QueryClient, Router
     DevInspector.tsx  # Click-to-source overlay (dev only)
     hooks/
-      useAuth.ts     # useSession, useLogin, useLogout hooks
+      useAuth.ts     # useSession, useLogin, useLogout, getDefaultRoute
     routes/
       __root.tsx     # Root layout
       index.tsx      # Landing page
       login.tsx      # Login page (email/password + Google OAuth)
-      dashboard.tsx  # Protected dashboard
+      dev.tsx        # Dev console — SUPER_ADMIN only, user management
+      dashboard.tsx  # Admin dashboard — ADMIN & SUPER_ADMIN
+      profile.tsx    # User profile — all authenticated users
+      blocked.tsx    # Blocked user info page
 prisma/
-  schema.prisma      # Database schema (User, Session)
-  seed.ts            # Seed script (demo users with bcrypt)
+  schema.prisma      # Database schema (User, Session, Role enum)
+  seed.ts            # Seed script (superadmin, admin, user with bcrypt)
   migrations/        # Prisma migrations
 tests/
   helpers.ts         # Test utilities (seedTestUser, createTestSession, cleanup)
@@ -109,14 +112,44 @@ tests/
     browser.ts       # Lightpanda CDP helper class
 ```
 
+## Roles & Routing
+
+Three roles with hierarchical access:
+
+| Role | Default Route | Can Access | Description |
+|------|--------------|------------|-------------|
+| `SUPER_ADMIN` | `/dev` | `/dev`, `/dashboard`, `/profile` | Full system access, user management |
+| `ADMIN` | `/dashboard` | `/dashboard`, `/profile` | Dashboard access with analytics |
+| `USER` | `/profile` | `/profile` | Profile only |
+
+- Default role for new users is `USER`
+- `SUPER_ADMIN` is assigned via seeder or `SUPER_ADMIN_EMAIL` env variable
+- Blocked users are redirected to `/blocked` and their sessions are invalidated
+
 ## Auth
 
-- **Email/password**: POST `/api/auth/login` — bcrypt verification, creates DB session
+- **Email/password**: POST `/api/auth/login` — bcrypt verification, blocked check, creates DB session
 - **Google OAuth**: GET `/api/auth/google` — redirects to Google, callback at `/api/auth/callback/google`
-- **Session check**: GET `/api/auth/session` — returns current user or 401
+- **Session check**: GET `/api/auth/session` — returns current user (with role & blocked status) or 401
 - **Logout**: POST `/api/auth/logout` — deletes session from DB
 
-Demo users (seeded): `admin@example.com` / `admin123`, `user@example.com` / `user123`
+Demo users (seeded):
+
+| Email | Password | Role |
+|-------|----------|------|
+| `superadmin@example.com` | `superadmin123` | SUPER_ADMIN |
+| `admin@example.com` | `admin123` | ADMIN |
+| `user@example.com` | `user123` | USER |
+
+## Admin API
+
+SUPER_ADMIN-only endpoints for user management:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/admin/users` | List all users |
+| `PUT` | `/api/admin/users/:id/role` | Change user role (USER/ADMIN) |
+| `PUT` | `/api/admin/users/:id/block` | Block/unblock user |
 
 ## E2E Tests (Lightpanda)
 
@@ -152,5 +185,6 @@ bun run test:e2e         # Run E2E tests
 | `DATABASE_URL`         | Yes      | PostgreSQL connection string               |
 | `GOOGLE_CLIENT_ID`     | Yes      | Google OAuth client ID                     |
 | `GOOGLE_CLIENT_SECRET` | Yes      | Google OAuth client secret                 |
+| `SUPER_ADMIN_EMAIL`    | No       | Comma-separated emails to auto-promote     |
 | `PORT`                 | No       | Server port (default: 3000)                |
 | `REACT_EDITOR`         | No       | Editor for click-to-source (default: code) |
