@@ -8,6 +8,15 @@ export interface User {
   name: string
   email: string
   role: Role
+  blocked: boolean
+}
+
+export function getDefaultRoute(role: Role): string {
+  switch (role) {
+    case 'SUPER_ADMIN': return '/dev'
+    case 'ADMIN': return '/dashboard'
+    default: return '/profile'
+  }
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -41,12 +50,7 @@ export function useLogin() {
       }),
     onSuccess: (data) => {
       queryClient.setQueryData(['auth', 'session'], data)
-      // Super admin → dashboard, others → profile
-      if (data.user.role === 'SUPER_ADMIN') {
-        navigate({ to: '/dashboard' })
-      } else {
-        navigate({ to: '/profile' })
-      }
+      navigate({ to: getDefaultRoute(data.user.role) })
     },
   })
 }

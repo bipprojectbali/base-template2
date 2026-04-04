@@ -35,6 +35,10 @@ export function createApp() {
         set.status = 401
         return { error: 'Email atau password salah' }
       }
+      if (user.blocked) {
+        set.status = 403
+        return { error: 'Akun Anda telah diblokir. Hubungi administrator.' }
+      }
       // Auto-promote super admin from env
       if (env.SUPER_ADMIN_EMAILS.includes(user.email) && user.role !== 'SUPER_ADMIN') {
         user = await prisma.user.update({ where: { id: user.id }, data: { role: 'SUPER_ADMIN' } })
@@ -60,7 +64,7 @@ export function createApp() {
       if (!token) { set.status = 401; return { user: null } }
       const session = await prisma.session.findUnique({
         where: { token },
-        include: { user: { select: { id: true, name: true, email: true, role: true } } },
+        include: { user: { select: { id: true, name: true, email: true, role: true, blocked: true } } },
       })
       if (!session || session.expiresAt < new Date()) {
         if (session) await prisma.session.delete({ where: { id: session.id } })
@@ -140,7 +144,80 @@ export function createApp() {
       await prisma.session.create({ data: { token, userId: user.id, expiresAt } })
 
       set.headers['set-cookie'] = `session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`
-      set.status = 302; set.headers['location'] = user.role === 'SUPER_ADMIN' ? '/dashboard' : '/profile'
+      const defaultRoute = user.role === 'SUPER_ADMIN' ? '/dev' : user.role === 'ADMIN' ? '/dashboard' : '/profile'
+      set.status = 302; set.headers['location'] = defaultRoute
+    })
+
+    // ─── Admin API (SUPER_ADMIN only) ───────────────────
+    .get('/api/admin/users', async ({ request, set }) => {
+      const cookie = request.headers.get('cookie') ?? ''
+      const token = cookie.match(/session=([^;]+)/)?.[1]
+      if (!token) { set.status = 401; return { error: 'Unauthorized' } }
+      const session = await prisma.session.findUnique({
+        where: { token },
+        include: { user: { select: { role: true } } },
+      })
+      if (!session || session.expiresAt < new Date() || session.user.role !== 'SUPER_ADMIN') {
+        set.status = 403; return { error: 'Forbidden' }
+      }
+      const users = await prisma.user.findMany({
+        select: { id: true, name: true, email: true, role: true, blocked: true, createdAt: true },
+        orderBy: { createdAt: 'asc' },
+      })
+      return { users }
+    })
+
+    .put('/api/admin/users/:id/role', async ({ request, params, set }) => {
+      const cookie = request.headers.get('cookie') ?? ''
+      const token = cookie.match(/session=([^;]+)/)?.[1]
+      if (!token) { set.status = 401; return { error: 'Unauthorized' } }
+      const session = await prisma.session.findUnique({
+        where: { token },
+        include: { user: { select: { id: true, role: true } } },
+      })
+      if (!session || session.expiresAt < new Date() || session.user.role !== 'SUPER_ADMIN') {
+        set.status = 403; return { error: 'Forbidden' }
+      }
+      if (session.user.id === params.id) {
+        set.status = 400; return { error: 'Tidak bisa mengubah role sendiri' }
+      }
+      const { role } = (await request.json()) as { role: string }
+      if (!['USER', 'ADMIN'].includes(role)) {
+        set.status = 400; return { error: 'Role tidak valid (USER atau ADMIN)' }
+      }
+      const user = await prisma.user.update({
+        where: { id: params.id },
+        data: { role: role as 'USER' | 'ADMIN' },
+        select: { id: true, name: true, email: true, role: true, blocked: true, createdAt: true },
+      })
+      return { user }
+    })
+
+    .put('/api/admin/users/:id/block', async ({ request, params, set }) => {
+      const cookie = request.headers.get('cookie') ?? ''
+      const token = cookie.match(/session=([^;]+)/)?.[1]
+      if (!token) { set.status = 401; return { error: 'Unauthorized' } }
+      const session = await prisma.session.findUnique({
+        where: { token },
+        include: { user: { select: { id: true, role: true } } },
+      })
+      if (!session || session.expiresAt < new Date() || session.user.role !== 'SUPER_ADMIN') {
+        set.status = 403; return { error: 'Forbidden' }
+      }
+      if (session.user.id === params.id) {
+        set.status = 400; return { error: 'Tidak bisa memblokir diri sendiri' }
+      }
+      const { blocked } = (await request.json()) as { blocked: boolean }
+      const user = await prisma.user.update({
+        where: { id: params.id },
+        data: { blocked },
+        select: { id: true, name: true, email: true, role: true, blocked: true, createdAt: true },
+      })
+      // Delete all sessions if blocked
+      if (blocked) {
+        await prisma.session.deleteMany({ where: { userId: params.id } })
+      }
+      return { user }
     })
 
     // ─── Example API ───────────────────────────────────

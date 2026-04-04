@@ -1,19 +1,45 @@
 import {
+  ActionIcon,
+  AppShell,
   Avatar,
   Badge,
-  Button,
+  Box,
   Card,
   Container,
   Group,
+  NavLink,
   Paper,
+  Progress,
+  RingProgress,
   SimpleGrid,
   Stack,
+  Table,
   Text,
   ThemeIcon,
   Title,
+  Tooltip,
 } from '@mantine/core'
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { TbChartBar, TbLogout, TbSettings, TbUsers } from 'react-icons/tb'
+import { useState } from 'react'
+import {
+  TbActivity,
+  TbArrowDownRight,
+  TbArrowUpRight,
+  TbBell,
+  TbCalendar,
+  TbChartBar,
+  TbChevronRight,
+  TbClipboardList,
+  TbCode,
+  TbCoin,
+  TbLayoutDashboard,
+  TbLogout,
+  TbMessages,
+  TbReportAnalytics,
+  TbSettings,
+  TbUser,
+  TbUsers,
+} from 'react-icons/tb'
 import { useLogout, useSession } from '@/frontend/hooks/useAuth'
 
 export const Route = createFileRoute('/dashboard')({
@@ -24,7 +50,8 @@ export const Route = createFileRoute('/dashboard')({
         queryFn: () => fetch('/api/auth/session', { credentials: 'include' }).then((r) => r.json()),
       })
       if (!data?.user) throw redirect({ to: '/login' })
-      if (data.user.role !== 'SUPER_ADMIN') throw redirect({ to: '/profile' })
+      if (data.user.blocked) throw redirect({ to: '/blocked' })
+      if (data.user.role === 'USER') throw redirect({ to: '/profile' })
     } catch (e) {
       if (e instanceof Error) throw redirect({ to: '/login' })
       throw e
@@ -33,61 +60,407 @@ export const Route = createFileRoute('/dashboard')({
   component: DashboardPage,
 })
 
-const stats = [
-  { title: 'Users', value: '1,234', icon: TbUsers, color: 'blue' },
-  { title: 'Revenue', value: '$12.4k', icon: TbChartBar, color: 'green' },
-  { title: 'Settings', value: '3 active', icon: TbSettings, color: 'violet' },
+const navItems = [
+  { label: 'Dashboard', icon: TbLayoutDashboard, key: 'dashboard' },
+  { label: 'Analytics', icon: TbReportAnalytics, key: 'analytics' },
+  { label: 'Orders', icon: TbClipboardList, key: 'orders' },
+  { label: 'Messages', icon: TbMessages, key: 'messages', badge: 3 },
+  { label: 'Calendar', icon: TbCalendar, key: 'calendar' },
+  { label: 'Settings', icon: TbSettings, key: 'settings' },
 ]
 
 function DashboardPage() {
   const { data } = useSession()
   const logout = useLogout()
   const user = data?.user
+  const [active, setActive] = useState('dashboard')
 
   return (
-    <Container size="md" py="xl">
-      <Stack gap="xl">
-        <Group justify="space-between">
-          <Title order={2}>Dashboard</Title>
-          <Button
-            variant="light"
-            color="red"
-            leftSection={<TbLogout size={16} />}
-            onClick={() => logout.mutate()}
-            loading={logout.isPending}
-          >
-            Logout
-          </Button>
-        </Group>
-
-        <Paper withBorder p="lg" radius="md">
-          <Group>
-            <Avatar color="blue" radius="xl" size="lg">
-              {user?.name?.charAt(0).toUpperCase()}
-            </Avatar>
+    <AppShell
+      navbar={{ width: 260, breakpoint: 'sm' }}
+      padding="md"
+    >
+      <AppShell.Navbar p="md">
+        <AppShell.Section>
+          <Group gap="xs" mb="md">
+            <ThemeIcon size="lg" variant="gradient" gradient={{ from: 'blue', to: 'cyan' }}>
+              <TbLayoutDashboard size={18} />
+            </ThemeIcon>
             <div>
-              <Group gap="xs">
-                <Text fw={500}>{user?.name}</Text>
-                <Badge color="red" variant="light" size="sm">SUPER ADMIN</Badge>
-              </Group>
-              <Text c="dimmed" size="sm">{user?.email}</Text>
+              <Text fw={700} size="sm">Dashboard</Text>
+              <Text size="xs" c="dimmed">Admin Panel</Text>
             </div>
           </Group>
-        </Paper>
+        </AppShell.Section>
 
-        <SimpleGrid cols={{ base: 1, sm: 3 }}>
-          {stats.map((stat) => (
+        <AppShell.Section grow>
+          {navItems.map((item) => (
+            <NavLink
+              key={item.key}
+              label={item.label}
+              leftSection={<item.icon size={18} />}
+              rightSection={
+                item.badge
+                  ? <Badge size="xs" color="red" variant="filled">{item.badge}</Badge>
+                  : <TbChevronRight size={14} />
+              }
+              active={active === item.key}
+              onClick={() => setActive(item.key)}
+              variant="light"
+              mb={4}
+            />
+          ))}
+
+          {user?.role === 'SUPER_ADMIN' && (
+            <>
+              <Text size="xs" c="dimmed" fw={500} mt="md" mb={4} ml="sm">Super Admin</Text>
+              <NavLink
+                label="Dev Console"
+                leftSection={<TbCode size={18} />}
+                rightSection={<TbChevronRight size={14} />}
+                component="a"
+                href="/dev"
+                variant="light"
+                mb={4}
+              />
+            </>
+          )}
+        </AppShell.Section>
+
+        <AppShell.Section>
+          <Box p="sm" style={{ borderTop: '1px solid var(--mantine-color-dark-4)' }}>
+            <Group justify="space-between">
+              <Group gap="xs">
+                <Avatar color={user?.role === 'SUPER_ADMIN' ? 'red' : 'violet'} radius="xl" size="sm">
+                  {user?.name?.charAt(0).toUpperCase()}
+                </Avatar>
+                <div>
+                  <Text size="xs" fw={500}>{user?.name}</Text>
+                  <Text size="xs" c="dimmed">{user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Admin'}</Text>
+                </div>
+              </Group>
+              <Group gap={4}>
+                <Tooltip label="Profile">
+                  <ActionIcon variant="subtle" color="gray" component="a" href="/profile">
+                    <TbUser size={16} />
+                  </ActionIcon>
+                </Tooltip>
+                <Tooltip label="Logout">
+                  <ActionIcon
+                    variant="subtle"
+                    color="red"
+                    onClick={() => logout.mutate()}
+                    loading={logout.isPending}
+                  >
+                    <TbLogout size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              </Group>
+            </Group>
+          </Box>
+        </AppShell.Section>
+      </AppShell.Navbar>
+
+      <AppShell.Main>
+        {active === 'dashboard' && <OverviewPanel />}
+        {active === 'analytics' && <AnalyticsPanel />}
+        {active === 'orders' && <OrdersPanel />}
+        {active === 'messages' && <PlaceholderPanel title="Messages" desc="Kelola pesan dan notifikasi." icon={TbMessages} />}
+        {active === 'calendar' && <PlaceholderPanel title="Calendar" desc="Jadwal dan agenda kegiatan." icon={TbCalendar} />}
+        {active === 'settings' && <PlaceholderPanel title="Settings" desc="Pengaturan akun dan aplikasi." icon={TbSettings} />}
+      </AppShell.Main>
+    </AppShell>
+  )
+}
+
+// ─── Overview Panel ────────────────────────────────────
+
+const statsData = [
+  { title: 'Revenue', value: '$13,456', diff: 34, icon: TbCoin, color: 'teal' },
+  { title: 'Users', value: '1,234', diff: 13, icon: TbUsers, color: 'blue' },
+  { title: 'Orders', value: '456', diff: -8, icon: TbClipboardList, color: 'violet' },
+  { title: 'Activity', value: '89%', diff: 5, icon: TbActivity, color: 'orange' },
+]
+
+function OverviewPanel() {
+  return (
+    <Container size="lg">
+      <Stack gap="lg">
+        <Group justify="space-between">
+          <Title order={3}>Overview</Title>
+          <Group gap="xs">
+            <Tooltip label="Notifications">
+              <ActionIcon variant="subtle" color="gray">
+                <TbBell size={18} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+        </Group>
+
+        <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }}>
+          {statsData.map((stat) => (
             <Card key={stat.title} withBorder padding="lg" radius="md">
               <Group justify="space-between" mb="xs">
-                <Text size="sm" c="dimmed" fw={500}>{stat.title}</Text>
-                <ThemeIcon variant="light" color={stat.color} size="sm">
+                <Text size="xs" c="dimmed" fw={600} tt="uppercase">{stat.title}</Text>
+                <ThemeIcon variant="light" color={stat.color} size="sm" radius="xl">
                   <stat.icon size={14} />
                 </ThemeIcon>
               </Group>
               <Text fw={700} size="xl">{stat.value}</Text>
+              <Group gap={4} mt={4}>
+                {stat.diff > 0 ? (
+                  <TbArrowUpRight size={14} color="var(--mantine-color-teal-6)" />
+                ) : (
+                  <TbArrowDownRight size={14} color="var(--mantine-color-red-6)" />
+                )}
+                <Text size="xs" c={stat.diff > 0 ? 'teal' : 'red'} fw={500}>
+                  {Math.abs(stat.diff)}%
+                </Text>
+                <Text size="xs" c="dimmed">vs bulan lalu</Text>
+              </Group>
             </Card>
           ))}
         </SimpleGrid>
+
+        <SimpleGrid cols={{ base: 1, md: 2 }}>
+          <Card withBorder padding="lg" radius="md">
+            <Text fw={600} mb="md">Traffic Source</Text>
+            <Stack gap="sm">
+              {[
+                { label: 'Direct', value: 45, color: 'blue' },
+                { label: 'Organic Search', value: 30, color: 'teal' },
+                { label: 'Social Media', value: 15, color: 'violet' },
+                { label: 'Referral', value: 10, color: 'orange' },
+              ].map((item) => (
+                <div key={item.label}>
+                  <Group justify="space-between" mb={4}>
+                    <Text size="sm">{item.label}</Text>
+                    <Text size="sm" fw={500}>{item.value}%</Text>
+                  </Group>
+                  <Progress value={item.value} color={item.color} size="sm" radius="xl" />
+                </div>
+              ))}
+            </Stack>
+          </Card>
+
+          <Card withBorder padding="lg" radius="md">
+            <Text fw={600} mb="md">Performance</Text>
+            <Group justify="center" gap="xl">
+              <div style={{ textAlign: 'center' }}>
+                <RingProgress
+                  size={100}
+                  thickness={10}
+                  roundCaps
+                  sections={[{ value: 72, color: 'blue' }]}
+                  label={<Text ta="center" fw={700} size="lg">72%</Text>}
+                />
+                <Text size="xs" c="dimmed" mt={4}>Completion</Text>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <RingProgress
+                  size={100}
+                  thickness={10}
+                  roundCaps
+                  sections={[{ value: 89, color: 'teal' }]}
+                  label={<Text ta="center" fw={700} size="lg">89%</Text>}
+                />
+                <Text size="xs" c="dimmed" mt={4}>Uptime</Text>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <RingProgress
+                  size={100}
+                  thickness={10}
+                  roundCaps
+                  sections={[{ value: 56, color: 'orange' }]}
+                  label={<Text ta="center" fw={700} size="lg">56%</Text>}
+                />
+                <Text size="xs" c="dimmed" mt={4}>Efficiency</Text>
+              </div>
+            </Group>
+          </Card>
+        </SimpleGrid>
+
+        <RecentActivityTable />
+      </Stack>
+    </Container>
+  )
+}
+
+// ─── Analytics Panel ───────────────────────────────────
+
+function AnalyticsPanel() {
+  return (
+    <Container size="lg">
+      <Stack gap="lg">
+        <Title order={3}>Analytics</Title>
+
+        <SimpleGrid cols={{ base: 1, sm: 3 }}>
+          {[
+            { label: 'Page Views', value: '24,521', diff: 12 },
+            { label: 'Bounce Rate', value: '32.4%', diff: -3 },
+            { label: 'Avg. Session', value: '4m 23s', diff: 8 },
+          ].map((stat) => (
+            <Card key={stat.label} withBorder padding="lg" radius="md">
+              <Text size="xs" c="dimmed" fw={600} tt="uppercase">{stat.label}</Text>
+              <Text fw={700} size="xl" mt={4}>{stat.value}</Text>
+              <Group gap={4} mt={4}>
+                {stat.diff > 0 ? (
+                  <TbArrowUpRight size={14} color="var(--mantine-color-teal-6)" />
+                ) : (
+                  <TbArrowDownRight size={14} color="var(--mantine-color-red-6)" />
+                )}
+                <Text size="xs" c={stat.diff > 0 ? 'teal' : 'red'} fw={500}>
+                  {Math.abs(stat.diff)}%
+                </Text>
+              </Group>
+            </Card>
+          ))}
+        </SimpleGrid>
+
+        <Card withBorder padding="lg" radius="md">
+          <Text fw={600} mb="md">Top Pages</Text>
+          <Table highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Page</Table.Th>
+                <Table.Th ta="right">Views</Table.Th>
+                <Table.Th ta="right">Unique</Table.Th>
+                <Table.Th ta="right">Bounce</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {[
+                { page: '/home', views: '8,234', unique: '5,120', bounce: '28%' },
+                { page: '/products', views: '5,678', unique: '3,456', bounce: '35%' },
+                { page: '/pricing', views: '3,912', unique: '2,890', bounce: '22%' },
+                { page: '/about', views: '2,345', unique: '1,780', bounce: '41%' },
+                { page: '/contact', views: '1,567', unique: '1,230', bounce: '38%' },
+              ].map((row) => (
+                <Table.Tr key={row.page}>
+                  <Table.Td>
+                    <Text size="sm" fw={500}>{row.page}</Text>
+                  </Table.Td>
+                  <Table.Td ta="right"><Text size="sm">{row.views}</Text></Table.Td>
+                  <Table.Td ta="right"><Text size="sm">{row.unique}</Text></Table.Td>
+                  <Table.Td ta="right"><Text size="sm">{row.bounce}</Text></Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Card>
+      </Stack>
+    </Container>
+  )
+}
+
+// ─── Orders Panel ──────────────────────────────────────
+
+const orderStatusColor: Record<string, string> = {
+  Completed: 'green',
+  Processing: 'blue',
+  Pending: 'yellow',
+  Cancelled: 'red',
+}
+
+const ordersData = [
+  { id: '#ORD-001', customer: 'Budi Santoso', amount: 'Rp 1.250.000', status: 'Completed', date: '2 jam lalu' },
+  { id: '#ORD-002', customer: 'Siti Rahayu', amount: 'Rp 890.000', status: 'Processing', date: '4 jam lalu' },
+  { id: '#ORD-003', customer: 'Andi Pratama', amount: 'Rp 2.100.000', status: 'Pending', date: '6 jam lalu' },
+  { id: '#ORD-004', customer: 'Dewi Lestari', amount: 'Rp 560.000', status: 'Completed', date: '1 hari lalu' },
+  { id: '#ORD-005', customer: 'Reza Mahendra', amount: 'Rp 1.780.000', status: 'Cancelled', date: '1 hari lalu' },
+  { id: '#ORD-006', customer: 'Putri Ayu', amount: 'Rp 3.400.000', status: 'Completed', date: '2 hari lalu' },
+  { id: '#ORD-007', customer: 'Hendra Wijaya', amount: 'Rp 720.000', status: 'Processing', date: '2 hari lalu' },
+]
+
+function OrdersPanel() {
+  return (
+    <Container size="lg">
+      <Stack gap="lg">
+        <Group justify="space-between">
+          <Title order={3}>Orders</Title>
+          <Badge variant="light" size="lg">{ordersData.length} orders</Badge>
+        </Group>
+
+        <Card withBorder radius="md" p={0}>
+          <Table highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Order ID</Table.Th>
+                <Table.Th>Customer</Table.Th>
+                <Table.Th>Amount</Table.Th>
+                <Table.Th>Status</Table.Th>
+                <Table.Th ta="right">Date</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {ordersData.map((order) => (
+                <Table.Tr key={order.id}>
+                  <Table.Td><Text size="sm" fw={500}>{order.id}</Text></Table.Td>
+                  <Table.Td><Text size="sm">{order.customer}</Text></Table.Td>
+                  <Table.Td><Text size="sm" fw={500}>{order.amount}</Text></Table.Td>
+                  <Table.Td>
+                    <Badge color={orderStatusColor[order.status]} variant="light" size="sm">
+                      {order.status}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td ta="right"><Text size="sm" c="dimmed">{order.date}</Text></Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Card>
+      </Stack>
+    </Container>
+  )
+}
+
+// ─── Recent Activity ───────────────────────────────────
+
+function RecentActivityTable() {
+  const activities = [
+    { user: 'Budi S.', action: 'Membuat order baru', time: '2 menit lalu', color: 'blue' },
+    { user: 'Siti R.', action: 'Update profil', time: '15 menit lalu', color: 'green' },
+    { user: 'Andi P.', action: 'Pembayaran diterima', time: '1 jam lalu', color: 'teal' },
+    { user: 'Dewi L.', action: 'Request refund', time: '3 jam lalu', color: 'orange' },
+    { user: 'Reza M.', action: 'Register akun baru', time: '5 jam lalu', color: 'violet' },
+  ]
+
+  return (
+    <Card withBorder padding="lg" radius="md">
+      <Text fw={600} mb="md">Recent Activity</Text>
+      <Stack gap="sm">
+        {activities.map((act, i) => (
+          <Paper key={i} p="sm" radius="sm" bg="dark.6">
+            <Group justify="space-between">
+              <Group gap="sm">
+                <Avatar color={act.color} radius="xl" size="sm">
+                  {act.user.charAt(0)}
+                </Avatar>
+                <div>
+                  <Text size="sm" fw={500}>{act.user}</Text>
+                  <Text size="xs" c="dimmed">{act.action}</Text>
+                </div>
+              </Group>
+              <Text size="xs" c="dimmed">{act.time}</Text>
+            </Group>
+          </Paper>
+        ))}
+      </Stack>
+    </Card>
+  )
+}
+
+// ─── Placeholder Panel ─────────────────────────────────
+
+function PlaceholderPanel({ title, desc, icon: Icon }: { title: string; desc: string; icon: React.ComponentType<{ size: number }> }) {
+  return (
+    <Container size="lg">
+      <Stack align="center" justify="center" gap="md" mih={400}>
+        <ThemeIcon size={64} variant="light" color="gray" radius="xl">
+          <Icon size={32} />
+        </ThemeIcon>
+        <Title order={3}>{title}</Title>
+        <Text c="dimmed" ta="center" maw={400}>{desc}</Text>
       </Stack>
     </Container>
   )

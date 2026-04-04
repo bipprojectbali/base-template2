@@ -14,7 +14,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useState } from 'react'
 import { FcGoogle } from 'react-icons/fc'
 import { TbAlertCircle, TbLogin, TbLock, TbMail } from 'react-icons/tb'
-import { useLogin } from '@/frontend/hooks/useAuth'
+import { getDefaultRoute, useLogin } from '@/frontend/hooks/useAuth'
 
 export const Route = createFileRoute('/login')({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -27,7 +27,7 @@ export const Route = createFileRoute('/login')({
         queryFn: () => fetch('/api/auth/session', { credentials: 'include' }).then((r) => r.json()),
       })
       if (data?.user) {
-        throw redirect({ to: data.user.role === 'SUPER_ADMIN' ? '/dashboard' : '/profile' })
+        throw redirect({ to: getDefaultRoute(data.user.role) })
       }
     } catch (e) {
       if (e instanceof Error) return
@@ -58,9 +58,11 @@ function LoginPage() {
             </Title>
 
             <Text c="dimmed" size="sm" ta="center">
-              Demo: <strong>superadmin@example.com</strong> / <strong>superadmin123</strong>
+              Super Admin: <strong>superadmin@example.com</strong> / <strong>superadmin123</strong>
               <br />
-              atau: <strong>user@example.com</strong> / <strong>user123</strong>
+              Admin: <strong>admin@example.com</strong> / <strong>admin123</strong>
+              <br />
+              User: <strong>user@example.com</strong> / <strong>user123</strong>
             </Text>
 
             {(login.isError || searchError) && (

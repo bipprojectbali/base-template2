@@ -9,7 +9,7 @@ import {
   Text,
   Title,
 } from '@mantine/core'
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import { TbLogout, TbUser } from 'react-icons/tb'
 import { useLogout, useSession } from '@/frontend/hooks/useAuth'
 
@@ -21,6 +21,7 @@ export const Route = createFileRoute('/profile')({
         queryFn: () => fetch('/api/auth/session', { credentials: 'include' }).then((r) => r.json()),
       })
       if (!data?.user) throw redirect({ to: '/login' })
+      if (data.user.blocked) throw redirect({ to: '/blocked' })
     } catch (e) {
       if (e instanceof Error) throw redirect({ to: '/login' })
       throw e
@@ -45,15 +46,27 @@ function ProfilePage() {
       <Stack gap="xl">
         <Group justify="space-between">
           <Title order={2}>Profile</Title>
-          <Button
-            variant="light"
-            color="red"
-            leftSection={<TbLogout size={16} />}
-            onClick={() => logout.mutate()}
-            loading={logout.isPending}
-          >
-            Logout
-          </Button>
+          <Group gap="xs">
+            {user?.role === 'SUPER_ADMIN' && (
+              <Button component={Link} to="/dev" variant="light" size="xs">
+                Dev Console
+              </Button>
+            )}
+            {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+              <Button component={Link} to="/dashboard" variant="light" size="xs">
+                Dashboard
+              </Button>
+            )}
+            <Button
+              variant="light"
+              color="red"
+              leftSection={<TbLogout size={16} />}
+              onClick={() => logout.mutate()}
+              loading={logout.isPending}
+            >
+              Logout
+            </Button>
+          </Group>
         </Group>
 
         <Paper withBorder p="xl" radius="md">
