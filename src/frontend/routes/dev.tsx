@@ -891,7 +891,7 @@ function DatabasePanelInner() {
   const schema = data?.schema
   const saveTimer = useRef<ReturnType<typeof setTimeout>>()
   const viewportTimer = useRef<ReturnType<typeof setTimeout>>()
-  const { setViewport } = useReactFlow()
+  const { setViewport, fitView: fitViewDb } = useReactFlow()
   const savedViewport = useMemo(() => loadViewport(), [])
 
   const { initialNodes, initialEdges } = useMemo(() => {
@@ -1006,13 +1006,14 @@ function DatabasePanelInner() {
           <Badge variant="light" color="blue" size="sm">{schema.relations.length} relations</Badge>
         </Group>
         <LayoutSelector layoutKey={STORAGE_KEY} onLayout={(layout) => {
-          setNodes((cur) => {
-            const laid = applyLayout(cur, edges, layout)
-            localStorage.removeItem(`${STORAGE_KEY}`)
+          getLayoutedElements(nodes, edges, layout).then(({ nodes: laid }) => {
+            setNodes(laid)
+            localStorage.removeItem(STORAGE_KEY)
+            localStorage.removeItem(VIEWPORT_KEY)
             const pos: Record<string, { x: number; y: number }> = {}
             for (const n of laid) pos[n.id] = n.position
             localStorage.setItem(STORAGE_KEY, JSON.stringify(pos))
-            return laid
+            requestAnimationFrame(() => fitViewDb({ padding: 0.2 }))
           })
         }} />
         <Tooltip label="Reload schema">
@@ -1200,90 +1201,76 @@ function ProjectPanel() {
   )
 }
 
-// ─── Layout Algorithms ────────────────────────
+// ─── ELK Layout Engine ────────────────────────
+import ELK from 'elkjs/lib/elk.bundled.js'
+
+const elk = new ELK()
 type LayoutType = 'horizontal' | 'vertical' | 'radial' | 'force'
 
-function applyLayout(nodes: Node[], edges: Edge[], layout: LayoutType, nodeWidth = 240, nodeHeight = 100): Node[] {
-  if (nodes.length === 0) return nodes
-  const gap = 40
+const ELK_OPTIONS: Record<LayoutType, Record<string, string>> = {
+  horizontal: {
+    'elk.algorithm': 'layered',
+    'elk.direction': 'RIGHT',
+    'elk.layered.spacing.nodeNodeBetweenLayers': '100',
+    'elk.spacing.nodeNode': '60',
+    'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+  },
+  vertical: {
+    'elk.algorithm': 'layered',
+    'elk.direction': 'DOWN',
+    'elk.layered.spacing.nodeNodeBetweenLayers': '80',
+    'elk.spacing.nodeNode': '60',
+    'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+  },
+  radial: {
+    'elk.algorithm': 'radial',
+    'elk.radial.compactor': 'WEDGE_COMPACTION',
+    'elk.spacing.nodeNode': '80',
+  },
+  force: {
+    'elk.algorithm': 'force',
+    'elk.force.iterations': '100',
+    'elk.spacing.nodeNode': '80',
+    'elk.force.repulsion': '2.0',
+  },
+}
 
-  if (layout === 'horizontal') {
-    const cols = Math.max(1, Math.ceil(Math.sqrt(nodes.length)))
-    return nodes.map((n, i) => ({
-      ...n,
-      position: { x: (i % cols) * (nodeWidth + gap), y: Math.floor(i / cols) * (nodeHeight + gap) },
-    }))
+async function getLayoutedElements(
+  nodes: Node[],
+  edges: Edge[],
+  layout: LayoutType,
+  nodeWidth = 240,
+  nodeHeight = 100,
+): Promise<{ nodes: Node[]; edges: Edge[] }> {
+  if (nodes.length === 0) return { nodes, edges }
+
+  const isHorizontal = layout === 'horizontal'
+  const graph = {
+    id: 'root',
+    layoutOptions: ELK_OPTIONS[layout],
+    children: nodes.map((node) => ({
+      id: node.id,
+      width: nodeWidth,
+      height: nodeHeight,
+    })),
+    edges: edges.map((edge) => ({
+      id: edge.id,
+      sources: [edge.source],
+      targets: [edge.target],
+    })),
   }
 
-  if (layout === 'vertical') {
-    const rows = Math.max(1, Math.ceil(Math.sqrt(nodes.length)))
-    return nodes.map((n, i) => ({
-      ...n,
-      position: { x: Math.floor(i / rows) * (nodeWidth + gap), y: (i % rows) * (nodeHeight + gap) },
-    }))
-  }
+  const layoutedGraph = await elk.layout(graph)
 
-  if (layout === 'radial') {
-    const cx = nodes.length * 30
-    const cy = nodes.length * 30
-    const baseRadius = Math.max(200, nodes.length * 40)
-    // Multiple rings if many nodes
-    const perRing = Math.max(8, Math.ceil(nodes.length / 3))
-    return nodes.map((n, i) => {
-      const ring = Math.floor(i / perRing)
-      const idxInRing = i % perRing
-      const totalInRing = Math.min(perRing, nodes.length - ring * perRing)
-      const angle = (2 * Math.PI * idxInRing) / totalInRing - Math.PI / 2
-      const r = baseRadius + ring * (nodeHeight + gap + 60)
-      return { ...n, position: { x: cx + r * Math.cos(angle) - nodeWidth / 2, y: cy + r * Math.sin(angle) - nodeHeight / 2 } }
-    })
-  }
-
-  // Force-directed layout
-  const positions = nodes.map((n, i) => ({
-    x: 400 + (Math.random() - 0.5) * nodes.length * 50,
-    y: 300 + (Math.random() - 0.5) * nodes.length * 50,
-    vx: 0, vy: 0,
-  }))
-  const idIdx = new Map(nodes.map((n, i) => [n.id, i]))
-
-  for (let iter = 0; iter < 80; iter++) {
-    const alpha = 1 - iter / 80
-    // Repulsion between all nodes
-    for (let i = 0; i < positions.length; i++) {
-      for (let j = i + 1; j < positions.length; j++) {
-        let dx = positions[i].x - positions[j].x
-        let dy = positions[i].y - positions[j].y
-        const dist = Math.max(1, Math.sqrt(dx * dx + dy * dy))
-        const force = (300 * alpha) / dist
-        const fx = (dx / dist) * force
-        const fy = (dy / dist) * force
-        positions[i].vx += fx; positions[i].vy += fy
-        positions[j].vx -= fx; positions[j].vy -= fy
-      }
+  const layoutedNodes = nodes.map((node) => {
+    const elkNode = layoutedGraph.children?.find((n) => n.id === node.id)
+    return {
+      ...node,
+      position: elkNode ? { x: elkNode.x!, y: elkNode.y! } : node.position,
     }
-    // Attraction along edges
-    for (const e of edges) {
-      const si = idIdx.get(e.source)
-      const ti = idIdx.get(e.target)
-      if (si === undefined || ti === undefined) continue
-      const dx = positions[ti].x - positions[si].x
-      const dy = positions[ti].y - positions[si].y
-      const dist = Math.max(1, Math.sqrt(dx * dx + dy * dy))
-      const force = dist * 0.01 * alpha
-      const fx = (dx / dist) * force
-      const fy = (dy / dist) * force
-      positions[si].vx += fx; positions[si].vy += fy
-      positions[ti].vx -= fx; positions[ti].vy -= fy
-    }
-    // Apply velocities with damping
-    for (const p of positions) {
-      p.x += p.vx * 0.8; p.y += p.vy * 0.8
-      p.vx *= 0.5; p.vy *= 0.5
-    }
-  }
+  })
 
-  return nodes.map((n, i) => ({ ...n, position: { x: positions[i].x, y: positions[i].y } }))
+  return { nodes: layoutedNodes, edges }
 }
 
 function savedLayout(key: string): LayoutType {
@@ -1339,19 +1326,24 @@ function useFlowAutoSave(key: string) {
     vpTimer.current = setTimeout(() => localStorage.setItem(`${key}:viewport`, JSON.stringify(vp)), 500)
   }, [key])
 
+  const { fitView } = useReactFlow()
+
   const relayout = useCallback((layout: LayoutType) => {
-    setNodes((cur) => {
-      const laid = applyLayout(cur, edges, layout)
-      // Clear saved positions so layout takes effect
+    const currentNodes = nodes
+    const currentEdges = edges
+    getLayoutedElements(currentNodes, currentEdges, layout).then(({ nodes: laid }) => {
+      setNodes(laid)
+      // Clear saved positions/viewport so layout takes effect
       localStorage.removeItem(`${key}:positions`)
       localStorage.removeItem(`${key}:viewport`)
-      // Save new positions after layout
+      // Save new positions
       const pos: Record<string, { x: number; y: number }> = {}
       for (const n of laid) pos[n.id] = n.position
       localStorage.setItem(`${key}:positions`, JSON.stringify(pos))
-      return laid
+      // Fit view after layout settles
+      requestAnimationFrame(() => fitView({ padding: 0.2 }))
     })
-  }, [key, edges])
+  }, [key, nodes, edges, fitView])
 
   return { nodes, setNodes, edges, setEdges, onEdgesChange, handleNodesChange, handleMoveEnd, savedVp, loadPos, relayout }
 }
