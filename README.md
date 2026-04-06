@@ -7,7 +7,7 @@ Full-stack web application template built with Bun, Elysia, React 19, and Vite.
 - **Runtime**: [Bun](https://bun.com)
 - **Server**: [Elysia.js](https://elysiajs.com) with Vite middleware mode (dev) / static serving (prod)
 - **Frontend**: React 19 + [TanStack Router](https://tanstack.com/router) (file-based routing) + [TanStack Query](https://tanstack.com/query)
-- **UI**: [Mantine v8](https://mantine.dev) (dark/light mode, auto default) + [react-icons](https://react-icons.github.io/react-icons/)
+- **UI**: [Mantine v8](https://mantine.dev) (dark/light mode, auto default) + [Mantine Modals](https://mantine.dev/x/modals/) + [react-icons](https://react-icons.github.io/react-icons/)
 - **Database**: PostgreSQL via [Prisma v6](https://www.prisma.io)
 - **Cache/Logs**: Redis via Bun native `Bun.RedisClient`
 - **Auth**: Session-based (bcrypt + HttpOnly cookies) + Google OAuth
@@ -94,16 +94,20 @@ src/
     applog.ts        # App log module (Redis-backed ring buffer)
     presence.ts      # WebSocket presence tracker (in-memory)
   frontend/
-    App.tsx           # Root component — MantineProvider (auto color scheme), QueryClient, Router
+    App.tsx           # Root component — MantineProvider, ModalsProvider, QueryClient, Router
     DevInspector.tsx  # Click-to-source overlay (dev only)
+    components/
+      ThemeToggle.tsx # Shared dark/light mode toggle button
+      NotFound.tsx    # 404 page
+      ErrorPage.tsx   # Error boundary page
     hooks/
       useAuth.ts     # useSession, useLogin, useLogout, getDefaultRoute
       usePresence.ts # WebSocket presence hook (real-time online status)
     routes/
-      __root.tsx     # Root layout with dark/light mode toggle
+      __root.tsx     # Root layout (Outlet only)
       index.tsx      # Landing page
       login.tsx      # Login page (email/password + Google OAuth)
-      dev.tsx        # Dev console — SUPER_ADMIN only (users, app logs, user logs, DB schema)
+      dev.tsx        # Dev console — SUPER_ADMIN only (users, app logs, user logs, DB schema, project viz)
       dashboard.tsx  # Admin dashboard — ADMIN & SUPER_ADMIN (stats, analytics, orders)
       profile.tsx    # User profile — all authenticated users
       blocked.tsx    # Blocked user info page
@@ -224,10 +228,24 @@ All views use React Flow with auto-save positions and viewport per view.
 | **Sessions** | Active user sessions with online status, role mapping, auto-refresh 10s |
 | **Live Requests** | Real-time API request visualization via WebSocket. Hit counters, status colors, response times |
 
+## Sidebar
+
+- Collapsible sidebar on Dev Console and Dashboard (AppShell layout)
+- Expanded: 260px with icons, labels, chevrons, user info
+- Minimized: 60px icon-only bar with tooltips on hover
+- State persisted in `localStorage` (`dev:sidebar`, `dashboard:sidebar`)
+
+## Logout Confirmation
+
+- Logout button shows a confirm modal (`@mantine/modals`) before logging out
+- Applied on Dev Console, Dashboard, and Profile pages
+- Blocked page logs out directly (no confirm needed)
+
 ## Dark/Light Mode
 
 - Default follows device preference (`prefers-color-scheme`)
-- Toggle button on all pages (top-right corner)
+- Toggle integrated per-page: sidebar footer (dev/dashboard), top-right (landing/login/blocked), header bar (profile)
+- Shared `ThemeToggle` component (`src/frontend/components/ThemeToggle.tsx`)
 - Choice persisted in `localStorage` by Mantine
 - Flash-free reload: `index.html` reads `localStorage` before first paint
 

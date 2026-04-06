@@ -89,19 +89,25 @@ Two log systems:
 React 19 + Vite 8 (middleware mode in dev). File-based routing with TanStack Router.
 
 - Entry: `src/frontend.tsx` — renders App, removes splash screen, DevInspector in dev
-- App: `src/frontend/App.tsx` — MantineProvider (auto color scheme), QueryClientProvider, RouterProvider
+- App: `src/frontend/App.tsx` — MantineProvider (auto color scheme), ModalsProvider (`@mantine/modals`), QueryClientProvider, RouterProvider
 - Routes: `src/frontend/routes/`
-  - `__root.tsx` — Root layout with dark/light mode toggle (fixed top-right)
-  - `index.tsx` — Landing page
-  - `login.tsx` — Login page (email/password + Google OAuth)
-  - `dev.tsx` — Dev console with AppShell sidebar: Overview, Users, App Logs, User Logs, Database (React Flow ER diagram), Project (4 sub-views: API Routes, File Structure, User Flow, Data Flow — all React Flow with auto-save), Settings (SUPER_ADMIN only)
+  - `__root.tsx` — Root layout (renders Outlet only, no floating UI)
+  - `index.tsx` — Landing page (theme toggle top-right)
+  - `login.tsx` — Login page (email/password + Google OAuth, theme toggle top-right)
+  - `dev.tsx` — Dev console with AppShell sidebar: Overview, Users, App Logs, User Logs, Database (React Flow ER diagram), Project (10 sub-views — all React Flow with auto-save), Settings (SUPER_ADMIN only)
   - `dashboard.tsx` — Admin dashboard with AppShell sidebar: Dashboard, Analytics, Orders, Messages, Calendar, Settings (ADMIN+)
-  - `profile.tsx` — User profile (all authenticated users)
-  - `blocked.tsx` — Blocked user page with explanation
+  - `profile.tsx` — User profile (all authenticated users, theme toggle in header)
+  - `blocked.tsx` — Blocked user page with explanation (theme toggle top-right)
+- Components: `src/frontend/components/`
+  - `ThemeToggle.tsx` — Shared dark/light mode toggle button (used across all pages)
+  - `NotFound.tsx` — 404 page
+  - `ErrorPage.tsx` — Error boundary page
 - Auth hooks: `src/frontend/hooks/useAuth.ts` — `useSession()`, `useLogin()`, `useLogout()`, `getDefaultRoute()`
 - Presence hook: `src/frontend/hooks/usePresence.ts` — WebSocket auto-connect, exposes `onlineUserIds`
-- UI: Mantine v8 (dark/light, auto default from device), react-icons, AppShell layout for dashboard pages
-- Color scheme: `index.html` reads `localStorage` before first paint to prevent flash. Toggle persisted by Mantine in `localStorage`.
+- UI: Mantine v8 + `@mantine/modals` (dark/light, auto default from device), react-icons, AppShell layout for dashboard pages
+- Sidebar: Collapsible (260px expanded → 60px icon-only minimized with tooltips). State persisted in `localStorage`. Both dev and dashboard use same pattern.
+- Logout: Confirm modal via `@mantine/modals` (`modals.openConfirmModal`) on dev, dashboard, and profile pages. Blocked page logs out directly (no confirm).
+- Color scheme: `index.html` reads `localStorage` before first paint to prevent flash. Toggle integrated per-page (sidebar footer on AppShell pages, top-right on standalone pages). Persisted by Mantine in `localStorage`.
 
 ## Database Schema Visualization
 
