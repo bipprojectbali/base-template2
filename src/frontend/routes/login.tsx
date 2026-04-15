@@ -1,27 +1,16 @@
-import {
-  Alert,
-  Box,
-  Button,
-  Center,
-  Divider,
-  Paper,
-  PasswordInput,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from '@mantine/core'
+import { Alert, Box, Button, Center, Divider, Paper, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core'
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useState } from 'react'
 import { FcGoogle } from 'react-icons/fc'
-import { TbAlertCircle, TbLogin, TbLock, TbMail } from 'react-icons/tb'
-import { getDefaultRoute, useLogin } from '@/frontend/hooks/useAuth'
+import { TbAlertCircle, TbLock, TbLogin, TbMail } from 'react-icons/tb'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
+import { getDefaultRoute, useLogin } from '@/frontend/hooks/useAuth'
 
 export const Route = createFileRoute('/login')({
-  validateSearch: (search: Record<string, unknown>) => ({
-    error: (search.error as string) || undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { error?: string } => {
+    const error = typeof search.error === 'string' ? search.error : undefined
+    return error ? { error } : {}
+  },
   beforeLoad: async ({ context }) => {
     try {
       const data = await context.queryClient.ensureQueryData({
@@ -94,12 +83,7 @@ function LoginPage() {
               required
             />
 
-            <Button
-              type="submit"
-              fullWidth
-              leftSection={<TbLogin size={18} />}
-              loading={login.isPending}
-            >
+            <Button type="submit" fullWidth leftSection={<TbLogin size={18} />} loading={login.isPending}>
               Sign in
             </Button>
 

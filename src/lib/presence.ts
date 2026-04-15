@@ -1,10 +1,5 @@
 import type { ServerWebSocket } from 'bun'
 
-interface PresenceSocket {
-  ws: ServerWebSocket<{ userId: string }>
-  userId: string
-}
-
 // userId → Set of WebSocket connections (one user can have multiple tabs)
 const connections = new Map<string, Set<ServerWebSocket<{ userId: string }>>>()
 

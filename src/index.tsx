@@ -31,9 +31,7 @@ async function serveFrontend(request: Request): Promise<Response> {
     // SPA route → serve index.html via Vite transform
     if (
       pathname === '/' ||
-      (!pathname.includes('.') &&
-        !pathname.startsWith('/@') &&
-        !pathname.startsWith('/__open-stack-frame-in-editor'))
+      (!pathname.includes('.') && !pathname.startsWith('/@') && !pathname.startsWith('/__open-stack-frame-in-editor'))
     ) {
       const htmlPath = path.resolve('index.html')
       let htmlContent = fs.readFileSync(htmlPath, 'utf-8')
@@ -71,10 +69,21 @@ async function serveFrontend(request: Request): Promise<Response> {
       const res = {
         statusCode: 200,
         headers: {} as Record<string, string>,
-        setHeader(name: string, value: string) { this.headers[name.toLowerCase()] = value; return this },
-        getHeader(name: string) { return this.headers[name.toLowerCase()] },
-        removeHeader(name: string) { delete this.headers[name.toLowerCase()] },
-        writeHead(code: number, reasonOrHeaders?: string | Record<string, string>, maybeHeaders?: Record<string, string>) {
+        setHeader(name: string, value: string) {
+          this.headers[name.toLowerCase()] = value
+          return this
+        },
+        getHeader(name: string) {
+          return this.headers[name.toLowerCase()]
+        },
+        removeHeader(name: string) {
+          delete this.headers[name.toLowerCase()]
+        },
+        writeHead(
+          code: number,
+          reasonOrHeaders?: string | Record<string, string>,
+          maybeHeaders?: Record<string, string>,
+        ) {
           this.statusCode = code
           const hdrs = typeof reasonOrHeaders === 'object' ? reasonOrHeaders : maybeHeaders
           if (hdrs) for (const [k, v] of Object.entries(hdrs)) this.headers[k.toLowerCase()] = String(v)
@@ -89,15 +98,25 @@ async function serveFrontend(request: Request): Promise<Response> {
             if (typeof data === 'string') chunks.push(Buffer.from(data))
             else if (data instanceof Uint8Array || Buffer.isBuffer(data)) chunks.push(data)
           }
-          resolve(new Response(
-            chunks.length > 0 ? Buffer.concat(chunks) : null,
-            { status: this.statusCode, headers: this.headers },
-          ))
+          resolve(
+            new Response(chunks.length > 0 ? Buffer.concat(chunks) : null, {
+              status: this.statusCode,
+              headers: this.headers,
+            }),
+          )
         },
-        once() { return this },
-        on() { return this },
-        emit() { return this },
-        removeListener() { return this },
+        once() {
+          return this
+        },
+        on() {
+          return this
+        },
+        emit() {
+          return this
+        },
+        removeListener() {
+          return this
+        },
       } as any
 
       vite.middlewares(req, res, (err: any) => {
@@ -116,9 +135,13 @@ async function serveFrontend(request: Request): Promise<Response> {
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
     const ext = path.extname(filePath)
     const contentType: Record<string, string> = {
-      '.js': 'application/javascript', '.css': 'text/css',
-      '.html': 'text/html; charset=utf-8', '.json': 'application/json',
-      '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon',
+      '.js': 'application/javascript',
+      '.css': 'text/css',
+      '.html': 'text/html; charset=utf-8',
+      '.json': 'application/json',
+      '.svg': 'image/svg+xml',
+      '.png': 'image/png',
+      '.ico': 'image/x-icon',
     }
     const isHashed = pathname.startsWith('/assets/')
     return new Response(Bun.file(filePath), {
@@ -165,7 +188,9 @@ const app = createApp()
     // Dev inspector: open file di editor
     if (!isProduction && pathname === '/__open-in-editor' && request.method === 'POST') {
       const { relativePath, lineNumber, columnNumber } = (await request.json()) as {
-        relativePath: string; lineNumber: string; columnNumber: string
+        relativePath: string
+        lineNumber: string
+        columnNumber: string
       }
       const file = `${process.cwd()}/${relativePath}`
       const editor = env.REACT_EDITOR

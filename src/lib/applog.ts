@@ -27,7 +27,11 @@ export async function appLog(level: LogLevel, message: string, detail?: string) 
   await redis.ltrim(REDIS_KEY, 0, MAX_ENTRIES - 1)
 }
 
-export async function getAppLogs(options?: { level?: LogLevel; limit?: number; afterId?: number }): Promise<AppLogEntry[]> {
+export async function getAppLogs(options?: {
+  level?: LogLevel
+  limit?: number
+  afterId?: number
+}): Promise<AppLogEntry[]> {
   const limit = options?.limit ?? 100
   // Fetch more than needed if filtering
   const fetchCount = options?.level || options?.afterId ? MAX_ENTRIES : limit

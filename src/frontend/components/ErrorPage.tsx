@@ -9,15 +9,13 @@ export function ErrorPage({ error }: { error: unknown }) {
       <Stack align="center" gap="md" maw={500}>
         <TbAlertTriangle size={80} color="var(--mantine-color-red-6)" />
         <Title order={1}>500</Title>
-        <Text c="dimmed" size="lg" ta="center">Terjadi kesalahan pada server</Text>
+        <Text c="dimmed" size="lg" ta="center">
+          Terjadi kesalahan pada server
+        </Text>
         <Code block c="red" style={{ maxWidth: '100%', wordBreak: 'break-word' }}>
           {message}
         </Code>
-        <Button
-          onClick={() => window.location.reload()}
-          leftSection={<TbRefresh size={18} />}
-          variant="light"
-        >
+        <Button onClick={() => window.location.reload()} leftSection={<TbRefresh size={18} />} variant="light">
           Muat Ulang
         </Button>
       </Stack>

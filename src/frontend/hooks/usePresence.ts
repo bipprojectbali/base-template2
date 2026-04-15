@@ -5,7 +5,7 @@ export function usePresence() {
   const { data } = useSession()
   const [onlineUserIds, setOnlineUserIds] = useState<string[]>([])
   const wsRef = useRef<WebSocket | null>(null)
-  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>()
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
     if (!data?.user) return
@@ -43,7 +43,7 @@ export function usePresence() {
         wsRef.current = null
       }
     }
-  }, [data?.user?.id])
+  }, [data?.user?.id, data?.user])
 
   return { onlineUserIds }
 }

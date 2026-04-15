@@ -1,4 +1,4 @@
-import { ColorSchemeScript, MantineProvider, createTheme } from '@mantine/core'
+import { ColorSchemeScript, createTheme, MantineProvider } from '@mantine/core'
 import '@mantine/core/styles.css'
 import { ModalsProvider } from '@mantine/modals'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'

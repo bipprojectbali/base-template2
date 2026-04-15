@@ -34,3 +34,8 @@ src/frontend/routeTree.gen.ts
 .DS_Store
 
 /generated/prisma
+
+# Playwright MCP artifacts & ad-hoc screenshots
+.playwright-mcp/
+.claude/scheduled_tasks.lock
+/*.png

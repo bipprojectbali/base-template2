@@ -39,19 +39,24 @@ function inspectorPlugin(): Plugin {
 
       for (let i = 0; i < lines.length; i++) {
         let line = lines[i]
-        const jsxPattern = /(<(?:[A-Z][a-zA-Z0-9]*(?:\.[a-zA-Z][a-zA-Z0-9]*)*|[a-z][a-zA-Z0-9-]*(?:\.[a-zA-Z][a-zA-Z0-9]*)*))\b/g
-        let match: RegExpExecArray | null = null
+        const jsxPattern =
+          /(<(?:[A-Z][a-zA-Z0-9]*(?:\.[a-zA-Z][a-zA-Z0-9]*)*|[a-z][a-zA-Z0-9-]*(?:\.[a-zA-Z][a-zA-Z0-9]*)*))\b/g
+        let match: RegExpExecArray | null = jsxPattern.exec(line)
 
-        while ((match = jsxPattern.exec(line)) !== null) {
+        while (match !== null) {
           const charBefore = match.index > 0 ? line[match.index - 1] : ''
-          if (/[a-zA-Z0-9_$.]/.test(charBefore)) continue
+          if (/[a-zA-Z0-9_$.]/.test(charBefore)) {
+            match = jsxPattern.exec(line)
+            continue
+          }
 
           // Cari line number asli di file original
           let actualLine = i + 1
           if (originalLines) {
             const afterTag = line.slice(match.index)
             // Snippet: tag + atribut sampai '>' pertama, tanpa injected attrs
-            const snippet = afterTag.split('>')[0]
+            const snippet = afterTag
+              .split('>')[0]
               .replace(/\s*data-inspector-[^"]*"[^"]*"/g, '')
               .trim()
             // Tag name saja sebagai fallback (e.g. "<Button")
@@ -112,6 +117,7 @@ function inspectorPlugin(): Plugin {
           line = line.slice(0, insertPos) + attr + line.slice(insertPos)
           modified = true
           jsxPattern.lastIndex += attr.length
+          match = jsxPattern.exec(line)
         }
         result.push(line)
       }

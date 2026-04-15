@@ -8,7 +8,9 @@ export function NotFound() {
       <Stack align="center" gap="md">
         <TbError404 size={80} color="var(--mantine-color-dimmed)" />
         <Title order={1}>404</Title>
-        <Text c="dimmed" size="lg">Halaman tidak ditemukan</Text>
+        <Text c="dimmed" size="lg">
+          Halaman tidak ditemukan
+        </Text>
         <Button component={Link} to="/" leftSection={<TbArrowLeft size={18} />} variant="light">
           Kembali ke Beranda
         </Button>

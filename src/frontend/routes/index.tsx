@@ -1,5 +1,5 @@
 import { Box, Button, Container, Group, Stack, Text, Title } from '@mantine/core'
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { SiBun } from 'react-icons/si'
 import { TbBrandReact, TbLogin, TbRocket } from 'react-icons/tb'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
