@@ -48,6 +48,7 @@ Session-based auth with HttpOnly cookies stored in DB.
 - Session: `GET /api/auth/session` — looks up session by cookie token, returns user (including role & blocked) or 401, auto-deletes expired
 - Logout: `POST /api/auth/logout` — deletes session from DB, clears cookie
 - Blocked users: login returns 403, existing sessions are invalidated on block, frontend redirects to `/blocked`
+- Dev-auth: `GET /api/dev-auth/login-as/:email?redirect=/path` — development only (`NODE_ENV=development`). Skips password/OAuth, creates session directly. For Playwright testing.
 
 ## Admin API (SUPER_ADMIN only)
 

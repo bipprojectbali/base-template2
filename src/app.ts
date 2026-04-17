@@ -252,6 +252,31 @@ export function createApp() {
         set.headers.location = defaultRoute
       })
 
+      // ─── Dev Auth (development only) ─────────────────────
+      .get('/api/dev-auth/login-as/:email', async ({ request, params, set, query }) => {
+        if (env.NODE_ENV !== 'development') {
+          set.status = 404
+          return { error: 'Not found' }
+        }
+        const user = await prisma.user.findUnique({ where: { email: params.email } })
+        if (!user) {
+          set.status = 404
+          return { error: `User not found: ${params.email}` }
+        }
+        const token = crypto.randomUUID()
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
+        await prisma.session.create({ data: { token, userId: user.id, expiresAt } })
+        set.headers['set-cookie'] = `session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`
+        appLog('info', `Dev-auth login: ${user.email} (${user.role})`, getIp(request))
+        const redirect = (query as Record<string, string>).redirect
+        if (redirect) {
+          set.status = 302
+          set.headers.location = redirect
+          return
+        }
+        return { user: { id: user.id, name: user.name, email: user.email, role: user.role } }
+      })
+
       // ─── Admin API (SUPER_ADMIN only) ───────────────────
       .get('/api/admin/users', async ({ request, set }) => {
         const cookie = request.headers.get('cookie') ?? ''
@@ -614,6 +639,14 @@ export function createApp() {
             auth: 'public',
             category: 'auth',
             description: 'Google OAuth callback',
+          },
+          // Dev Auth
+          {
+            method: 'GET',
+            path: '/api/dev-auth/login-as/:email',
+            auth: 'public',
+            category: 'auth',
+            description: 'Dev-only: login as any user by email (development only)',
           },
           // Admin
           {

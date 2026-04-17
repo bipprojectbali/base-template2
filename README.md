@@ -142,6 +142,11 @@ Three roles with hierarchical access:
 - **Google OAuth**: GET `/api/auth/google` — redirects to Google, callback at `/api/auth/callback/google`
 - **Session check**: GET `/api/auth/session` — returns current user (with role & blocked status) or 401
 - **Logout**: POST `/api/auth/logout` — deletes session from DB
+- **Dev-auth**: GET `/api/dev-auth/login-as/:email?redirect=/path` — development only, skips password/OAuth. For Playwright testing:
+  ```ts
+  // Playwright: login as superadmin and go to /dev
+  await page.goto('http://localhost:3111/api/dev-auth/login-as/superadmin@example.com?redirect=/dev')
+  ```
 
 Demo users (seeded):
 
