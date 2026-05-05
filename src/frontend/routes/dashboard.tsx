@@ -22,7 +22,7 @@ import {
 } from '@mantine/core'
 import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import { modals } from '@mantine/modals'
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { createRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import {
   TbActivity,
@@ -48,10 +48,13 @@ import {
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { TicketsPanel } from '@/frontend/components/TicketsPanel'
 import { useLogout, useSession } from '@/frontend/hooks/useAuth'
+import { rootRoute } from './__root'
 
 const validTabs = ['dashboard', 'tickets', 'analytics', 'orders', 'messages', 'calendar', 'settings'] as const
 
-export const Route = createFileRoute('/dashboard')({
+export const dashboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/dashboard',
   validateSearch: (search: Record<string, unknown>) => ({
     tab: validTabs.includes(search.tab as any) ? (search.tab as string) : 'dashboard',
   }),
@@ -99,7 +102,7 @@ function DashboardPage() {
   const { data } = useSession()
   const logout = useLogout()
   const user = data?.user
-  const { tab: active } = Route.useSearch()
+  const { tab: active } = dashboardRoute.useSearch()
   const isQcOnly = user?.role === 'QC'
   const navItems = navItemsAll.filter((item) => (isQcOnly ? !item.adminOnly : true))
   const navigate = useNavigate()

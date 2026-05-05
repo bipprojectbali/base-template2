@@ -1,5 +1,4 @@
 import path from 'node:path'
-import { TanStackRouterVite } from '@tanstack/router-vite-plugin'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
@@ -10,15 +9,7 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  plugins: [
-    TanStackRouterVite({
-      routesDirectory: './src/frontend/routes',
-      generatedRouteTree: './src/frontend/routeTree.gen.ts',
-      routeFileIgnorePrefix: '-',
-      quoteStyle: 'single',
-    }),
-    react(),
-  ],
+  plugins: [react()],
   build: {
     outDir: 'dist',
     emptyOutDir: true,

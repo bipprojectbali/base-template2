@@ -1,11 +1,14 @@
 import { Avatar, Badge, Button, Container, Group, Paper, Stack, Text, Title } from '@mantine/core'
 import { modals } from '@mantine/modals'
-import { createFileRoute, Link, redirect } from '@tanstack/react-router'
+import { createRoute, Link, redirect } from '@tanstack/react-router'
 import { TbLogout, TbUser } from 'react-icons/tb'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { useLogout, useSession } from '@/frontend/hooks/useAuth'
+import { rootRoute } from './__root'
 
-export const Route = createFileRoute('/profile')({
+export const profileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/profile',
   beforeLoad: async ({ context }) => {
     try {
       const data = await context.queryClient.ensureQueryData({

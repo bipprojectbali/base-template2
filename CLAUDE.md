@@ -117,18 +117,20 @@ Two log systems:
 
 ## Frontend
 
-React 19 + Vite 8 (middleware mode in dev). File-based routing with TanStack Router.
+React 19 + Vite 8 (middleware mode in dev). **Static (code-based) routing** with TanStack Router — no codegen plugin, no generated files.
 
 - Entry: `src/frontend.tsx` — renders App, removes splash screen, DevInspector in dev
 - App: `src/frontend/App.tsx` — MantineProvider (auto color scheme), ModalsProvider (`@mantine/modals`), QueryClientProvider, RouterProvider
-- Routes: `src/frontend/routes/`
-  - `__root.tsx` — Root layout (renders Outlet only, no floating UI)
-  - `index.tsx` — Landing page (theme toggle top-right)
-  - `login.tsx` — Login page (email/password + Google OAuth, theme toggle top-right)
-  - `dev.tsx` — Dev console with AppShell sidebar: Overview, Users, App Logs, User Logs, Database (React Flow ER diagram), Project (10 sub-views — all React Flow with auto-save), Settings (SUPER_ADMIN only)
-  - `dashboard.tsx` — Admin dashboard with AppShell sidebar: Dashboard, Analytics, Orders, Messages, Calendar, Settings (ADMIN+)
-  - `profile.tsx` — User profile (all authenticated users, theme toggle in header)
-  - `blocked.tsx` — Blocked user page with explanation (theme toggle top-right)
+- Router: `src/frontend/router.ts` — assembles routeTree from all routes, creates router, registers `Register` type. **This is the single source of truth for navigation structure.**
+- Routes: `src/frontend/routes/` — each file exports a named route constant (e.g. `loginRoute`, `devRoute`). Use `createRoute({ getParentRoute: () => rootRoute, path, ... })`. Never use `createFileRoute`.
+  - `__root.tsx` — exports `rootRoute` via `createRootRouteWithContext`. Also exports `RouterContext` type.
+  - `index.tsx` — Landing page (theme toggle top-right). Exports `indexRoute`.
+  - `login.tsx` — Login page (email/password + Google OAuth). Exports `loginRoute`. `validateSearch` for `?error=`.
+  - `dev.tsx` — Dev console (SUPER_ADMIN only). Exports `devRoute`. `validateSearch` for `?tab=`.
+  - `dashboard.tsx` — Admin dashboard (ADMIN, QC). Exports `dashboardRoute`. `validateSearch` for `?tab=`.
+  - `profile.tsx` — User profile (all authenticated users). Exports `profileRoute`.
+  - `blocked.tsx` — Blocked user page. Exports `blockedRoute`.
+- Rule: when adding a new route, (1) create the file, (2) export a named `*Route` const using `createRoute`, (3) add it to `router.ts` `addChildren([...])`.
 - Components: `src/frontend/components/`
   - `ThemeToggle.tsx` — Shared dark/light mode toggle button (used across all pages)
   - `NotFound.tsx` — 404 page

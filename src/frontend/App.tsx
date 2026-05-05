@@ -2,8 +2,8 @@ import { ColorSchemeScript, createTheme, MantineProvider } from '@mantine/core'
 import '@mantine/core/styles.css'
 import { ModalsProvider } from '@mantine/modals'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { createRouter, RouterProvider } from '@tanstack/react-router'
-import { routeTree } from './routeTree.gen'
+import { RouterProvider } from '@tanstack/react-router'
+import { router } from './router'
 
 const theme = createTheme({
   primaryColor: 'blue',
@@ -16,17 +16,6 @@ const queryClient = new QueryClient({
   },
 })
 
-const router = createRouter({
-  routeTree,
-  context: { queryClient },
-})
-
-declare module '@tanstack/react-router' {
-  interface Register {
-    router: typeof router
-  }
-}
-
 export function App() {
   return (
     <>
@@ -34,7 +23,7 @@ export function App() {
       <MantineProvider theme={theme} defaultColorScheme="auto">
         <ModalsProvider>
           <QueryClientProvider client={queryClient}>
-            <RouterProvider router={router} />
+            <RouterProvider router={router} context={{ queryClient }} />
           </QueryClientProvider>
         </ModalsProvider>
       </MantineProvider>

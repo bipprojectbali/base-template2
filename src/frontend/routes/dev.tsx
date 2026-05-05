@@ -23,7 +23,7 @@ import {
 } from '@mantine/core'
 import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { createRoute, redirect, useNavigate } from '@tanstack/react-router'
 import {
   Background,
   Controls,
@@ -70,11 +70,14 @@ import {
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { TicketsPanel } from '@/frontend/components/TicketsPanel'
 import { type Role, useLogout, useSession } from '@/frontend/hooks/useAuth'
+import { rootRoute } from './__root'
 import { usePresence } from '@/frontend/hooks/usePresence'
 
 const validTabs = ['overview', 'users', 'tickets', 'app-logs', 'user-logs', 'database', 'project', 'settings'] as const
 
-export const Route = createFileRoute('/dev')({
+export const devRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/dev',
   validateSearch: (search: Record<string, unknown>) => ({
     tab: validTabs.includes(search.tab as any) ? (search.tab as string) : 'overview',
   }),
@@ -119,7 +122,7 @@ function DevPage() {
   const { data } = useSession()
   const logout = useLogout()
   const user = data?.user
-  const { tab: active } = Route.useSearch()
+  const { tab: active } = devRoute.useSearch()
   const navigate = useNavigate()
   const [mobileOpened, { toggle: toggleMobile, close: closeMobile }] = useDisclosure(false)
   const isMobile = useMediaQuery('(max-width: 48em)')

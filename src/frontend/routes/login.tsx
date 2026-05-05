@@ -1,12 +1,15 @@
 import { Alert, Box, Button, Center, Divider, Paper, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core'
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createRoute, redirect } from '@tanstack/react-router'
 import { useState } from 'react'
 import { FcGoogle } from 'react-icons/fc'
 import { TbAlertCircle, TbLock, TbLogin, TbMail } from 'react-icons/tb'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { getDefaultRoute, useLogin } from '@/frontend/hooks/useAuth'
+import { rootRoute } from './__root'
 
-export const Route = createFileRoute('/login')({
+export const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/login',
   validateSearch: (search: Record<string, unknown>): { error?: string } => {
     const error = typeof search.error === 'string' ? search.error : undefined
     return error ? { error } : {}
@@ -30,7 +33,7 @@ export const Route = createFileRoute('/login')({
 
 function LoginPage() {
   const login = useLogin()
-  const { error: searchError } = Route.useSearch()
+  const { error: searchError } = loginRoute.useSearch()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 

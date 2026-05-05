@@ -1,10 +1,13 @@
 import { Box, Button, Container, Group, Stack, Text, Title } from '@mantine/core'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createRoute, Link } from '@tanstack/react-router'
 import { SiBun } from 'react-icons/si'
 import { TbBrandReact, TbLogin, TbRocket } from 'react-icons/tb'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
+import { rootRoute } from './__root'
 
-export const Route = createFileRoute('/')({
+export const indexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
   component: HomePage,
 })
 

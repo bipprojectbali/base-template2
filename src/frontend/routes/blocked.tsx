@@ -1,10 +1,13 @@
 import { Alert, Box, Button, Center, Paper, Stack, Text, ThemeIcon, Title } from '@mantine/core'
-import { createFileRoute } from '@tanstack/react-router'
+import { createRoute } from '@tanstack/react-router'
 import { TbAlertTriangle, TbLogout, TbShieldOff } from 'react-icons/tb'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { useLogout } from '@/frontend/hooks/useAuth'
+import { rootRoute } from './__root'
 
-export const Route = createFileRoute('/blocked')({
+export const blockedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/blocked',
   component: BlockedPage,
 })
 
