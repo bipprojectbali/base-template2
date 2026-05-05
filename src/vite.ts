@@ -1,6 +1,5 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { TanStackRouterVite } from '@tanstack/router-vite-plugin'
 import react from '@vitejs/plugin-react'
 import type { Plugin } from 'vite'
 import { createServer as createViteServer } from 'vite'
@@ -163,12 +162,6 @@ export async function createVite() {
       },
     },
     plugins: [
-      TanStackRouterVite({
-        routesDirectory: './src/frontend/routes',
-        generatedRouteTree: './src/frontend/routeTree.gen.ts',
-        routeFileIgnorePrefix: '-',
-        quoteStyle: 'single',
-      }),
       inspectorPlugin(),
       react(),
       dedupeRefreshPlugin(),
