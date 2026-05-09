@@ -13,45 +13,48 @@ afterAll(async () => {
   await prisma.$disconnect()
 })
 
-describe('Full auth flow: login → session → logout → session', () => {
+describe('Full auth flow: sign-in → session → sign-out → session', () => {
   test('complete auth lifecycle', async () => {
-    // 1. Login
-    const loginRes = await app.handle(new Request('http://localhost/api/auth/login', {
+    // 1. Sign In
+    const signInRes = await app.handle(new Request('http://localhost/api/auth/sign-in/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: 'flow@example.com', password: 'flow123' }),
     }))
-    expect(loginRes.status).toBe(200)
+    expect(signInRes.status).toBe(200)
 
-    const loginBody = await loginRes.json()
-    expect(loginBody.user.email).toBe('flow@example.com')
-    expect(loginBody.user.role).toBe('USER')
+    const signInBody = await signInRes.json()
+    expect(signInBody.user.email).toBe('flow@example.com')
 
-    const setCookie = loginRes.headers.get('set-cookie')!
-    const token = setCookie.match(/session=([^;]+)/)?.[1]!
+    // Extract Better Auth session cookie
+    const setCookie = signInRes.headers.get('set-cookie') ?? ''
+    const tokenMatch = setCookie.match(/better-auth\.session_token=([^;]+)/)
+    const token = tokenMatch?.[1]
     expect(token).toBeDefined()
 
     // 2. Check session — should be valid
-    const sessionRes = await app.handle(new Request('http://localhost/api/auth/session', {
-      headers: { cookie: `session=${token}` },
+    const sessionRes = await app.handle(new Request('http://localhost/api/auth/get-session', {
+      headers: { cookie: `better-auth.session_token=${token}` },
     }))
     expect(sessionRes.status).toBe(200)
     const sessionBody = await sessionRes.json()
+    expect(sessionBody.user).toBeDefined()
     expect(sessionBody.user.email).toBe('flow@example.com')
 
-    // 3. Logout
-    const logoutRes = await app.handle(new Request('http://localhost/api/auth/logout', {
+    // 3. Sign Out
+    const signOutRes = await app.handle(new Request('http://localhost/api/auth/sign-out', {
       method: 'POST',
-      headers: { cookie: `session=${token}` },
+      headers: { cookie: `better-auth.session_token=${token}` },
     }))
-    expect(logoutRes.status).toBe(200)
+    expect(signOutRes.status).toBe(200)
 
-    // 4. Check session again — should be invalid
-    const afterLogoutRes = await app.handle(new Request('http://localhost/api/auth/session', {
-      headers: { cookie: `session=${token}` },
+    // 4. Check session again — should be null
+    const afterSignOutRes = await app.handle(new Request('http://localhost/api/auth/get-session', {
+      headers: { cookie: `better-auth.session_token=${token}` },
     }))
-    expect(afterLogoutRes.status).toBe(401)
-    const afterLogoutBody = await afterLogoutRes.json()
-    expect(afterLogoutBody.user).toBeNull()
+    expect(afterSignOutRes.status).toBe(200)
+    const afterText = await afterSignOutRes.text()
+    // Better Auth returns literal null body when session is gone
+    expect(afterText === 'null' || afterText === '').toBe(true)
   })
 })

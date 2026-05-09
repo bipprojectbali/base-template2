@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
+import { authClient } from '@/lib/auth-client'
 
 export type Role = 'USER' | 'QC' | 'ADMIN' | 'SUPER_ADMIN'
 
@@ -24,51 +24,70 @@ export function getDefaultRoute(role: Role): string {
   }
 }
 
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, { credentials: 'include', ...init })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Request failed' }))
-    throw new Error(err.error || `HTTP ${res.status}`)
-  }
-  return res.json()
-}
-
 export function useSession() {
-  return useQuery({
-    queryKey: ['auth', 'session'],
-    queryFn: () => apiFetch<{ user: User | null }>('/api/auth/session'),
-    retry: false,
-    staleTime: 30_000,
-  })
+  const session = authClient.useSession()
+  const user = session.data?.user as any
+
+  return {
+    data: user
+      ? {
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: (user.role as Role) ?? 'USER',
+            blocked: (user.blocked as boolean) ?? false,
+          } satisfies User,
+        }
+      : null,
+    isLoading: session.isPending,
+    error: session.error,
+  }
 }
 
 export function useLogin() {
-  const queryClient = useQueryClient()
   const navigate = useNavigate()
 
-  return useMutation({
-    mutationFn: (data: { email: string; password: string }) =>
-      apiFetch<{ user: User }>('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      }),
-    onSuccess: (data) => {
-      queryClient.setQueryData(['auth', 'session'], data)
-      navigate({ to: getDefaultRoute(data.user.role) })
-    },
-  })
+  const signIn = async (data: { email: string; password: string }) => {
+    const result = await authClient.signIn.email({
+      email: data.email,
+      password: data.password,
+    })
+
+    if (result.error) {
+      throw new Error(result.error.message ?? 'Login gagal')
+    }
+
+    const user = result.data?.user as any
+    if (user) {
+      const role = (user.role as Role) ?? 'USER'
+      navigate({ to: getDefaultRoute(role) })
+    }
+
+    return result
+  }
+
+  return {
+    mutate: signIn,
+    mutateAsync: signIn,
+    isPending: false,
+    isError: false,
+    error: null as Error | null,
+  }
 }
 
 export function useLogout() {
-  const queryClient = useQueryClient()
   const navigate = useNavigate()
 
-  return useMutation({
-    mutationFn: () => apiFetch<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
-    onSuccess: () => {
-      queryClient.setQueryData(['auth', 'session'], { user: null })
-      navigate({ to: '/login' })
-    },
-  })
+  const signOut = async () => {
+    await authClient.signOut()
+    navigate({ to: '/login' })
+    return { ok: true }
+  }
+
+  return {
+    mutate: signOut,
+    mutateAsync: signOut,
+    isPending: false,
+  }
 }

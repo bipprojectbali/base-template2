@@ -4,6 +4,7 @@ import { createRoute, Link, redirect } from '@tanstack/react-router'
 import { TbLogout, TbUser } from 'react-icons/tb'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { useLogout, useSession } from '@/frontend/hooks/useAuth'
+import { authClient } from '@/lib/auth-client'
 import { rootRoute } from './__root'
 
 export const profileRoute = createRoute({
@@ -13,10 +14,14 @@ export const profileRoute = createRoute({
     try {
       const data = await context.queryClient.ensureQueryData({
         queryKey: ['auth', 'session'],
-        queryFn: () => fetch('/api/auth/session', { credentials: 'include' }).then((r) => r.json()),
+        queryFn: async () => {
+          const session = await authClient.getSession()
+          return session.data ? { user: session.data.user } : { user: null }
+        },
       })
       if (!data?.user) throw redirect({ to: '/login' })
-      if (data.user.blocked) throw redirect({ to: '/blocked' })
+      const user = data.user as any
+      if (user.blocked) throw redirect({ to: '/blocked' })
     } catch (e) {
       if (e instanceof Error) throw redirect({ to: '/login' })
       throw e

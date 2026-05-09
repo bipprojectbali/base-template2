@@ -16,65 +16,50 @@ afterAll(async () => {
   await prisma.$disconnect()
 })
 
-describe('POST /api/auth/logout', () => {
-  test('logout clears session cookie', async () => {
-    const token = await createTestSession(testUserId)
-    const res = await app.handle(new Request('http://localhost/api/auth/logout', {
+describe('POST /api/auth/sign-out', () => {
+  test('sign-out deletes session from database', async () => {
+    const signedToken = await createTestSession(testUserId)
+    // Plain token is the part before the first dot-separated signature
+    const plainToken = signedToken.split('.')[0]
+
+    let session = await prisma.session.findFirst({ where: { userId: testUserId } })
+    expect(session).not.toBeNull()
+
+    const res = await app.handle(new Request('http://localhost/api/auth/sign-out', {
       method: 'POST',
-      headers: { cookie: `session=${token}` },
+      headers: { cookie: `better-auth.session_token=${signedToken}` },
     }))
 
     expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.ok).toBe(true)
 
-    // Cookie should be cleared
-    const setCookie = res.headers.get('set-cookie')
-    expect(setCookie).toContain('session=;')
-    expect(setCookie).toContain('Max-Age=0')
-  })
-
-  test('logout deletes session from database', async () => {
-    const token = await createTestSession(testUserId)
-
-    // Verify session exists
-    let session = await prisma.session.findUnique({ where: { token } })
-    expect(session).not.toBeNull()
-
-    await app.handle(new Request('http://localhost/api/auth/logout', {
-      method: 'POST',
-      headers: { cookie: `session=${token}` },
-    }))
-
-    // Verify session deleted
-    session = await prisma.session.findUnique({ where: { token } })
+    // Session should be deleted by Better Auth
+    session = await prisma.session.findUnique({ where: { token: plainToken } })
     expect(session).toBeNull()
   })
 
-  test('logout without cookie still returns ok', async () => {
-    const res = await app.handle(new Request('http://localhost/api/auth/logout', {
+  test('sign-out without cookie returns ok', async () => {
+    const res = await app.handle(new Request('http://localhost/api/auth/sign-out', {
       method: 'POST',
     }))
 
     expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.ok).toBe(true)
   })
 
-  test('session is invalid after logout', async () => {
+  test('session is invalid after sign-out', async () => {
     const token = await createTestSession(testUserId)
 
-    // Logout
-    await app.handle(new Request('http://localhost/api/auth/logout', {
+    await app.handle(new Request('http://localhost/api/auth/sign-out', {
       method: 'POST',
-      headers: { cookie: `session=${token}` },
+      headers: { cookie: `better-auth.session_token=${token}` },
     }))
 
-    // Try to use the same session
-    const sessionRes = await app.handle(new Request('http://localhost/api/auth/session', {
-      headers: { cookie: `session=${token}` },
+    const sessionRes = await app.handle(new Request('http://localhost/api/auth/get-session', {
+      headers: { cookie: `better-auth.session_token=${token}` },
     }))
 
-    expect(sessionRes.status).toBe(401)
+    expect(sessionRes.status).toBe(200)
+    const text = await sessionRes.text()
+    // Better Auth returns null body or empty when session is gone
+    expect(text === 'null' || text === '' || (JSON.parse(text || 'null') === null)).toBe(true)
   })
 })

@@ -1,27 +1,59 @@
 import { PrismaClient } from '../generated/prisma'
+import { scrypt, randomBytes } from 'node:crypto'
 
 const prisma = new PrismaClient()
 
-const SUPER_ADMIN_EMAILS = (process.env.SUPER_ADMIN_EMAIL ?? '').split(',').map(e => e.trim()).filter(Boolean)
+const SUPER_ADMIN_EMAILS = (process.env.SUPER_ADMIN_EMAIL ?? '').split(',').map((e) => e.trim()).filter(Boolean)
+
+/** Hash using Better Auth's scrypt format: "salt:hex" */
+async function hashPassword(password: string): Promise<string> {
+  const salt = randomBytes(16).toString('hex')
+  const key = await new Promise<Buffer>((resolve, reject) => {
+    scrypt(
+      password.normalize('NFKC'),
+      salt,
+      64,
+      { N: 16384, r: 16, p: 1, maxmem: 128 * 16384 * 16 * 2 },
+      (err, derivedKey) => (err ? reject(err) : resolve(derivedKey)),
+    )
+  })
+  return `${salt}:${key.toString('hex')}`
+}
+
+async function upsertUser(
+  email: string,
+  password: string,
+  name: string,
+  role: 'USER' | 'ADMIN' | 'QC' | 'SUPER_ADMIN',
+) {
+  const hashed = await hashPassword(password)
+
+  const user = await prisma.user.upsert({
+    where: { email },
+    update: { name, role },
+    create: { email, name, role },
+  })
+
+  await prisma.account.upsert({
+    where: { id: `${user.id}-credential` },
+    update: { password: hashed },
+    create: {
+      id: `${user.id}-credential`,
+      accountId: user.id,
+      providerId: 'credential',
+      userId: user.id,
+      password: hashed,
+    },
+  })
+
+  console.log(`Seeded: ${email} (${role})`)
+}
 
 async function main() {
-  const users = [
-    { name: 'Super Admin', email: 'superadmin@example.com', password: 'superadmin123', role: 'SUPER_ADMIN' as const },
-    { name: 'Admin', email: 'admin@example.com', password: 'admin123', role: 'ADMIN' as const },
-    { name: 'User', email: 'user@example.com', password: 'user123', role: 'USER' as const },
-  ]
+  await upsertUser('superadmin@example.com', 'superadmin123', 'Super Admin', 'SUPER_ADMIN')
+  await upsertUser('admin@example.com', 'admin123', 'Admin', 'ADMIN')
+  await upsertUser('user@example.com', 'user123', 'User', 'USER')
 
-  for (const u of users) {
-    const hashed = await Bun.password.hash(u.password, { algorithm: 'bcrypt' })
-    await prisma.user.upsert({
-      where: { email: u.email },
-      update: { name: u.name, password: hashed, role: u.role },
-      create: { name: u.name, email: u.email, password: hashed, role: u.role },
-    })
-    console.log(`Seeded: ${u.email} (${u.role})`)
-  }
-
-  // Promote super admin emails from env
   for (const email of SUPER_ADMIN_EMAILS) {
     const user = await prisma.user.findUnique({ where: { email } })
     if (user && user.role !== 'SUPER_ADMIN') {

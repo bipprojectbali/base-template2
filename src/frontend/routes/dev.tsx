@@ -7,6 +7,7 @@ import {
   Burger,
   Card,
   Container,
+  Divider,
   Group,
   Menu,
   NavLink,
@@ -70,6 +71,7 @@ import {
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { TicketsPanel } from '@/frontend/components/TicketsPanel'
 import { type Role, useLogout, useSession } from '@/frontend/hooks/useAuth'
+import { authClient } from '@/lib/auth-client'
 import { rootRoute } from './__root'
 import { usePresence } from '@/frontend/hooks/usePresence'
 
@@ -85,11 +87,15 @@ export const devRoute = createRoute({
     try {
       const data = await context.queryClient.ensureQueryData({
         queryKey: ['auth', 'session'],
-        queryFn: () => fetch('/api/auth/session', { credentials: 'include' }).then((r) => r.json()),
+        queryFn: async () => {
+          const session = await authClient.getSession()
+          return session.data ? { user: session.data.user } : { user: null }
+        },
       })
       if (!data?.user) throw redirect({ to: '/login' })
-      if (data.user.blocked) throw redirect({ to: '/blocked' })
-      if (data.user.role !== 'SUPER_ADMIN') throw redirect({ to: '/profile' })
+      const user = data.user as any
+      if (user.blocked) throw redirect({ to: '/blocked' })
+      if (user.role !== 'SUPER_ADMIN') throw redirect({ to: '/profile' })
     } catch (e) {
       if (e instanceof Error) throw redirect({ to: '/login' })
       throw e
@@ -231,6 +237,36 @@ function DevPage() {
                 mb={4}
               />
             ),
+          )}
+
+          {collapsed ? (
+            <Divider my={6} />
+          ) : (
+            <Divider my={6} label="Apps" labelPosition="left" />
+          )}
+
+          {collapsed ? (
+            <Tooltip label="Dashboard" position="right">
+              <ActionIcon
+                variant="subtle"
+                color="blue"
+                size="lg"
+                mb={4}
+                style={{ width: '100%' }}
+                onClick={() => navigate({ to: '/dashboard', search: { tab: 'dashboard' } })}
+              >
+                <TbLayoutDashboard size={18} />
+              </ActionIcon>
+            </Tooltip>
+          ) : (
+            <NavLink
+              label="Dashboard"
+              leftSection={<TbLayoutDashboard size={18} />}
+              rightSection={<TbChevronRight size={14} />}
+              onClick={() => navigate({ to: '/dashboard', search: { tab: 'dashboard' } })}
+              variant="light"
+              mb={4}
+            />
           )}
         </AppShell.Section>
 

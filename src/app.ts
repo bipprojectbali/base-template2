@@ -4,8 +4,11 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 import { Elysia } from 'elysia'
 import { createMcpServer, type McpScope } from '../scripts/mcp/server'
 import { appLog, clearAppLogs, getAppLogs } from './lib/applog'
+import { auth } from './lib/auth'
+import { type AuthUser, betterAuthPlugin } from './lib/auth-middleware'
 import { prisma } from './lib/db'
 import { env } from './lib/env'
+import { redis } from './lib/redis'
 import { addConnection, broadcastToAdmins, getOnlineUserIds, removeConnection } from './lib/presence'
 import { parseSchema } from './lib/schema-parser'
 import pkg from '../package.json'
@@ -14,28 +17,27 @@ function getIp(request: Request): string {
   return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip') ?? 'unknown'
 }
 
-function getPublicOrigin(request: Request): string {
-  if (process.env.BETTER_AUTH_URL) return process.env.BETTER_AUTH_URL.replace(/\/$/, '')
-  const url = new URL(request.url)
-  const proto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim()
-  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? url.host
-  return `${proto ?? url.protocol.replace(':', '')}://${host}`
-}
-
 function audit(userId: string | null, action: string, detail: string | null, ip: string) {
   prisma.auditLog.create({ data: { userId, action, detail, ip } }).catch(() => {})
 }
 
-async function requireAuth(request: Request): Promise<{ userId: string; role: string; email: string } | null> {
-  const cookie = request.headers.get('cookie') ?? ''
-  const token = cookie.match(/session=([^;]+)/)?.[1]
-  if (!token) return null
-  const session = await prisma.session.findUnique({
-    where: { token },
-    include: { user: { select: { id: true, role: true, email: true, blocked: true } } },
-  })
-  if (!session || session.expiresAt < new Date() || session.user.blocked) return null
-  return { userId: session.user.id, role: session.user.role, email: session.user.email }
+// Auth guard helpers — return Response if unauthorized, null if OK
+function guardSuperAdmin(authUser: AuthUser | null): Response | null {
+  if (!authUser) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+  if (authUser!.blocked || authUser!.role !== 'SUPER_ADMIN') return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { 'Content-Type': 'application/json' } })
+  return null
+}
+
+function guardQcOrAdmin(authUser: AuthUser | null): Response | null {
+  if (!authUser) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+  if (authUser!.blocked || !['QC', 'ADMIN', 'SUPER_ADMIN'].includes(authUser!.role)) return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { 'Content-Type': 'application/json' } })
+  return null
+}
+
+function guardAuth(authUser: AuthUser | null): Response | null {
+  if (!authUser) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+  if (authUser!.blocked) return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { 'Content-Type': 'application/json' } })
+  return null
 }
 
 function getAllowedStatusTransitions(current: string, role: 'QC' | 'ADMIN' | 'SUPER_ADMIN'): string[] {
@@ -46,8 +48,7 @@ function getAllowedStatusTransitions(current: string, role: 'QC' | 'ADMIN' | 'SU
     IN_PROGRESS: { qc: ['CLOSED'], admin: ['READY_FOR_QC'] },
     READY_FOR_QC: { qc: ['CLOSED', 'REOPENED'], admin: [] },
     REOPENED: { qc: ['CLOSED'], admin: ['IN_PROGRESS'] },
-    CLOSED: { qc: ['REOPENED'], admin: [] },
-  }
+    CLOSED: { qc: ['REOPENED'], admin: [] } }
   const entry = matrix[current]
   if (!entry) return []
   const out = new Set<string>()
@@ -61,16 +62,22 @@ export function createApp() {
 
   return (
     new Elysia()
-      .use(cors())
+      .use(cors({
+        origin: env.BETTER_AUTH_URL || `http://localhost:${env.PORT}`,
+        credentials: true,
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'] }))
       .use(html())
+
+      // ─── Better Auth plugin (handles /api/auth/* routes) ──
+      .use(betterAuthPlugin)
 
       // ─── Global Error Handler ────────────────────────
       .onError(({ code, error, request }) => {
         if (code === 'NOT_FOUND') {
           return new Response(JSON.stringify({ error: 'Not Found', status: 404 }), {
             status: 404,
-            headers: { 'Content-Type': 'application/json' },
-          })
+            headers: { 'Content-Type': 'application/json' } })
         }
         const url = new URL(request.url)
         const message = error instanceof Error ? error.message : String(error)
@@ -78,8 +85,7 @@ export function createApp() {
         console.error('[Server Error]', error)
         return new Response(JSON.stringify({ error: 'Internal Server Error', status: 500 }), {
           status: 500,
-          headers: { 'Content-Type': 'application/json' },
-        })
+          headers: { 'Content-Type': 'application/json' } })
       })
 
       // ─── Request timing + logging ─────────────────────
@@ -88,7 +94,7 @@ export function createApp() {
       })
       .onAfterResponse(({ request, set }) => {
         const url = new URL(request.url)
-        if (url.pathname.startsWith('/api/')) {
+        if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth/')) {
           const status = typeof set.status === 'number' ? set.status : 200
           const level = status >= 500 ? ('error' as const) : status >= 400 ? ('warn' as const) : ('info' as const)
           appLog(level, `${request.method} ${url.pathname} ${status}`)
@@ -99,167 +105,12 @@ export function createApp() {
             path: url.pathname,
             status,
             duration,
-            timestamp: new Date().toISOString(),
-          })
+            timestamp: new Date().toISOString() })
         }
       })
 
       // API routes
       .get('/health', () => ({ status: 'ok' }))
-
-      // ─── Auth API ──────────────────────────────────────
-      .post('/api/auth/login', async ({ request, set }) => {
-        const ip = getIp(request)
-        const { email, password } = (await request.json()) as { email: string; password: string }
-        let user = await prisma.user.findUnique({ where: { email } })
-        if (!user || !(await Bun.password.verify(password, user.password))) {
-          audit(user?.id ?? null, 'LOGIN_FAILED', `email: ${email}`, ip)
-          appLog('warn', `Login failed: ${email}`, ip)
-          set.status = 401
-          return { error: 'Email atau password salah' }
-        }
-        if (user.blocked) {
-          audit(user.id, 'LOGIN_BLOCKED', null, ip)
-          appLog('warn', `Login blocked: ${email}`, ip)
-          set.status = 403
-          return { error: 'Akun Anda telah diblokir. Hubungi administrator.' }
-        }
-        // Auto-promote super admin from env
-        if (env.SUPER_ADMIN_EMAILS.includes(user.email) && user.role !== 'SUPER_ADMIN') {
-          user = await prisma.user.update({ where: { id: user.id }, data: { role: 'SUPER_ADMIN' } })
-        }
-        const token = crypto.randomUUID()
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
-        await prisma.session.create({ data: { token, userId: user.id, expiresAt } })
-        set.headers['set-cookie'] = `session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`
-        audit(user.id, 'LOGIN', `via email`, ip)
-        appLog('info', `Login: ${email} (${user.role})`, ip)
-        return { user: { id: user.id, name: user.name, email: user.email, role: user.role } }
-      })
-
-      .post('/api/auth/logout', async ({ request, set }) => {
-        const ip = getIp(request)
-        const cookie = request.headers.get('cookie') ?? ''
-        const token = cookie.match(/session=([^;]+)/)?.[1]
-        if (token) {
-          const session = await prisma.session.findUnique({ where: { token }, select: { userId: true } })
-          if (session) {
-            audit(session.userId, 'LOGOUT', null, ip)
-            appLog('info', `Logout: userId=${session.userId}`, ip)
-          }
-          await prisma.session.deleteMany({ where: { token } })
-        }
-        set.headers['set-cookie'] = 'session=; Path=/; HttpOnly; Max-Age=0'
-        return { ok: true }
-      })
-
-      .get('/api/auth/session', async ({ request, set }) => {
-        const cookie = request.headers.get('cookie') ?? ''
-        const token = cookie.match(/session=([^;]+)/)?.[1]
-        if (!token) {
-          set.status = 401
-          return { user: null }
-        }
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { id: true, name: true, email: true, role: true, blocked: true } } },
-        })
-        if (!session || session.expiresAt < new Date()) {
-          if (session) await prisma.session.delete({ where: { id: session.id } })
-          set.status = 401
-          return { user: null }
-        }
-        return { user: session.user }
-      })
-
-      // ─── Google OAuth ──────────────────────────────────
-      .get('/api/auth/google', ({ request, set }) => {
-        const origin = getPublicOrigin(request)
-        const params = new URLSearchParams({
-          client_id: env.GOOGLE_CLIENT_ID,
-          redirect_uri: `${origin}/api/auth/callback/google`,
-          response_type: 'code',
-          scope: 'openid email profile',
-          access_type: 'offline',
-          prompt: 'consent',
-        })
-        set.status = 302
-        set.headers.location = `https://accounts.google.com/o/oauth2/v2/auth?${params}`
-      })
-
-      .get('/api/auth/callback/google', async ({ request, set }) => {
-        const ip = getIp(request)
-        const url = new URL(request.url)
-        const code = url.searchParams.get('code')
-        const origin = getPublicOrigin(request)
-
-        if (!code) {
-          set.status = 302
-          set.headers.location = '/login?error=google_failed'
-          return
-        }
-
-        // Exchange code for tokens
-        const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            code,
-            client_id: env.GOOGLE_CLIENT_ID,
-            client_secret: env.GOOGLE_CLIENT_SECRET,
-            redirect_uri: `${origin}/api/auth/callback/google`,
-            grant_type: 'authorization_code',
-          }),
-        })
-
-        if (!tokenRes.ok) {
-          appLog('warn', 'Google OAuth token exchange failed', ip)
-          set.status = 302
-          set.headers.location = '/login?error=google_failed'
-          return
-        }
-
-        const tokens = (await tokenRes.json()) as { access_token: string }
-
-        // Get user info
-        const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-          headers: { Authorization: `Bearer ${tokens.access_token}` },
-        })
-
-        if (!userInfoRes.ok) {
-          appLog('warn', 'Google OAuth userinfo fetch failed', ip)
-          set.status = 302
-          set.headers.location = '/login?error=google_failed'
-          return
-        }
-
-        const googleUser = (await userInfoRes.json()) as { email: string; name: string }
-
-        // Upsert user (no password for Google users)
-        const isSuperAdmin = env.SUPER_ADMIN_EMAILS.includes(googleUser.email)
-        const user = await prisma.user.upsert({
-          where: { email: googleUser.email },
-          update: { name: googleUser.name, ...(isSuperAdmin ? { role: 'SUPER_ADMIN' } : {}) },
-          create: {
-            email: googleUser.email,
-            name: googleUser.name,
-            password: '',
-            role: isSuperAdmin ? 'SUPER_ADMIN' : 'USER',
-          },
-        })
-
-        // Create session
-        const token = crypto.randomUUID()
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
-        await prisma.session.create({ data: { token, userId: user.id, expiresAt } })
-
-        set.headers['set-cookie'] = `session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`
-        audit(user.id, 'LOGIN', 'via Google OAuth', ip)
-        appLog('info', `Login (Google): ${googleUser.email} (${user.role})`, ip)
-        const defaultRoute = user.role === 'SUPER_ADMIN' ? '/dev' : user.role === 'ADMIN' ? '/dashboard' : '/profile'
-        set.status = 302
-        set.headers.location = defaultRoute
-      })
 
       // ─── Dev Auth (development only) ─────────────────────
       .get('/api/dev-auth/login-as/:email', async ({ request, params, set, query }) => {
@@ -272,60 +123,45 @@ export function createApp() {
           set.status = 404
           return { error: `User not found: ${params.email}` }
         }
+
+        // Create session directly in DB (dev-only), using Better Auth cookie format
         const token = crypto.randomUUID()
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
-        await prisma.session.create({ data: { token, userId: user.id, expiresAt } })
-        set.headers['set-cookie'] = `session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        const sessionRecord = await prisma.session.create({
+          data: { token, userId: user.id, expiresAt, ipAddress: getIp(request) } })
+
+        // Also cache in Redis (Better Auth secondary storage key format)
+        const sessionPayload = JSON.stringify({ ...sessionRecord, user })
+        await redis.set(`session:${token}`, sessionPayload, 'EX', 7 * 24 * 60 * 60)
+
         appLog('info', `Dev-auth login: ${user.email} (${user.role})`, getIp(request))
+
+        const cookieHeader = `better-auth.session_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`
+
         const redirect = (query as Record<string, string>).redirect
         if (redirect) {
           set.status = 302
           set.headers.location = redirect
+          set.headers['set-cookie'] = cookieHeader
           return
         }
+        set.headers['set-cookie'] = cookieHeader
         return { user: { id: user.id, name: user.name, email: user.email, role: user.role } }
       })
 
       // ─── Admin API (SUPER_ADMIN only) ───────────────────
-      .get('/api/admin/users', async ({ request, set }) => {
-        const cookie = request.headers.get('cookie') ?? ''
-        const token = cookie.match(/session=([^;]+)/)?.[1]
-        if (!token) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { role: true } } },
-        })
-        if (!session || session.expiresAt < new Date() || session.user.role !== 'SUPER_ADMIN') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
+      .get('/api/admin/users', async ({ authUser, set }) => {
+        const guard = guardSuperAdmin(authUser); if (guard) return guard
         const users = await prisma.user.findMany({
           select: { id: true, name: true, email: true, role: true, blocked: true, createdAt: true },
-          orderBy: { createdAt: 'asc' },
-        })
+          orderBy: { createdAt: 'asc' } })
         return { users }
       })
 
-      .put('/api/admin/users/:id/role', async ({ request, params, set }) => {
+      .put('/api/admin/users/:id/role', async ({ request, params, set, authUser }) => {
+        const guard = guardSuperAdmin(authUser); if (guard) return guard
         const ip = getIp(request)
-        const cookie = request.headers.get('cookie') ?? ''
-        const token = cookie.match(/session=([^;]+)/)?.[1]
-        if (!token) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { id: true, role: true } } },
-        })
-        if (!session || session.expiresAt < new Date() || session.user.role !== 'SUPER_ADMIN') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
-        if (session.user.id === params.id) {
+        if (authUser!.id === params.id) {
           set.status = 400
           return { error: 'Tidak bisa mengubah role sendiri' }
         }
@@ -342,30 +178,16 @@ export function createApp() {
         const user = await prisma.user.update({
           where: { id: params.id },
           data: { role: role as 'USER' | 'QC' | 'ADMIN' },
-          select: { id: true, name: true, email: true, role: true, blocked: true, createdAt: true },
-        })
-        audit(params.id, 'ROLE_CHANGED', `${target?.role} → ${role} by ${session.user.id}`, ip)
+          select: { id: true, name: true, email: true, role: true, blocked: true, createdAt: true } })
+        audit(params.id, 'ROLE_CHANGED', `${target?.role} → ${role} by ${authUser!.id}`, ip)
         appLog('info', `Role changed: ${user.email} ${target?.role} → ${role}`)
         return { user }
       })
 
-      .put('/api/admin/users/:id/block', async ({ request, params, set }) => {
+      .put('/api/admin/users/:id/block', async ({ request, params, set, authUser }) => {
+        const guard = guardSuperAdmin(authUser); if (guard) return guard
         const ip = getIp(request)
-        const cookie = request.headers.get('cookie') ?? ''
-        const token = cookie.match(/session=([^;]+)/)?.[1]
-        if (!token) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { id: true, role: true } } },
-        })
-        if (!session || session.expiresAt < new Date() || session.user.role !== 'SUPER_ADMIN') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
-        if (session.user.id === params.id) {
+        if (authUser!.id === params.id) {
           set.status = 400
           return { error: 'Tidak bisa memblokir diri sendiri' }
         }
@@ -373,14 +195,23 @@ export function createApp() {
         const user = await prisma.user.update({
           where: { id: params.id },
           data: { blocked },
-          select: { id: true, name: true, email: true, role: true, blocked: true, createdAt: true },
-        })
-        // Delete all sessions if blocked
+          select: { id: true, name: true, email: true, role: true, blocked: true, createdAt: true } })
+
         if (blocked) {
+          // Delete all DB sessions
+          const sessions = await prisma.session.findMany({
+            where: { userId: params.id },
+            select: { token: true } })
           await prisma.session.deleteMany({ where: { userId: params.id } })
+
+          // Also delete from Redis secondary storage
+          for (const s of sessions) {
+            await redis.del(`session:${s.token}`).catch(() => {})
+          }
         }
+
         const action = blocked ? 'BLOCKED' : 'UNBLOCKED'
-        audit(params.id, action, `by ${session.user.id}`, ip)
+        audit(params.id, action, `by ${authUser!.id}`, ip)
         appLog('info', `User ${action.toLowerCase()}: ${user.email}`)
         return { user }
       })
@@ -388,69 +219,33 @@ export function createApp() {
       // ─── WebSocket Presence ──────────────────────────────
       .ws('/ws/presence', {
         async open(ws) {
-          // Authenticate via cookie
-          const cookie = ws.data.headers?.cookie ?? ''
-          const token = (cookie as string).match(/session=([^;]+)/)?.[1]
-          if (!token) {
+          const session = await auth.api.getSession({
+            headers: new Headers({ cookie: ws.data.headers?.cookie ?? '' }) })
+          if (!session) {
             ws.close(4001, 'Unauthorized')
             return
           }
-          const session = await prisma.session.findUnique({
-            where: { token },
-            include: { user: { select: { id: true, role: true } } },
-          })
-          if (!session || session.expiresAt < new Date()) {
-            ws.close(4001, 'Unauthorized')
-            return
-          }
-
-          const isAdmin = session.user.role === 'SUPER_ADMIN' || session.user.role === 'ADMIN'
-          ;(ws.data as unknown as { userId: string }).userId = session.user.id
-          addConnection(ws as any, session.user.id, isAdmin)
+          const user = session.user as any
+          const isAdmin = user.role === 'SUPER_ADMIN' || user.role === 'ADMIN'
+          ;(ws.data as unknown as { userId: string }).userId = user.id
+          addConnection(ws as any, user.id, isAdmin)
         },
         close(ws) {
           removeConnection(ws as any)
         },
         message() {
           // No client messages expected
-        },
-      })
+        } })
 
-      // ─── Presence REST (for initial load) ──────────────
-      .get('/api/admin/presence', async ({ request, set }) => {
-        const cookie = request.headers.get('cookie') ?? ''
-        const token = cookie.match(/session=([^;]+)/)?.[1]
-        if (!token) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { role: true } } },
-        })
-        if (!session || session.expiresAt < new Date() || session.user.role !== 'SUPER_ADMIN') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
+      // ─── Presence REST ──────────────────────────────────
+      .get('/api/admin/presence', ({ authUser }) => {
+        const guard = guardSuperAdmin(authUser); if (guard) return guard
         return { online: getOnlineUserIds() }
       })
 
       // ─── Log API (SUPER_ADMIN only) ────────────────────
-      .get('/api/admin/logs/app', async ({ request, set }) => {
-        const cookie = request.headers.get('cookie') ?? ''
-        const token = cookie.match(/session=([^;]+)/)?.[1]
-        if (!token) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { role: true } } },
-        })
-        if (!session || session.expiresAt < new Date() || session.user.role !== 'SUPER_ADMIN') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
+      .get('/api/admin/logs/app', async ({ request, authUser }) => {
+        const guard = guardSuperAdmin(authUser); if (guard) return guard
         const url = new URL(request.url)
         const level = url.searchParams.get('level') as any
         const limit = parseInt(url.searchParams.get('limit') ?? '100', 10)
@@ -458,21 +253,8 @@ export function createApp() {
         return { logs: await getAppLogs({ level: level || undefined, limit, afterId: afterId || undefined }) }
       })
 
-      .get('/api/admin/logs/audit', async ({ request, set }) => {
-        const cookie = request.headers.get('cookie') ?? ''
-        const token = cookie.match(/session=([^;]+)/)?.[1]
-        if (!token) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { role: true } } },
-        })
-        if (!session || session.expiresAt < new Date() || session.user.role !== 'SUPER_ADMIN') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
+      .get('/api/admin/logs/audit', async ({ request, authUser }) => {
+        const guard = guardSuperAdmin(authUser); if (guard) return guard
         const url = new URL(request.url)
         const userId = url.searchParams.get('userId')
         const action = url.searchParams.get('action')
@@ -486,68 +268,25 @@ export function createApp() {
           where,
           include: { user: { select: { name: true, email: true } } },
           orderBy: { createdAt: 'desc' },
-          take: limit,
-        })
+          take: limit })
         return { logs }
       })
 
-      .delete('/api/admin/logs/app', async ({ request, set }) => {
-        const cookie = request.headers.get('cookie') ?? ''
-        const token = cookie.match(/session=([^;]+)/)?.[1]
-        if (!token) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { role: true } } },
-        })
-        if (!session || session.expiresAt < new Date() || session.user.role !== 'SUPER_ADMIN') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
+      .delete('/api/admin/logs/app', async ({}) => {
         await clearAppLogs()
         appLog('info', 'App logs cleared manually')
         return { ok: true }
       })
 
-      .delete('/api/admin/logs/audit', async ({ request, set }) => {
-        const cookie = request.headers.get('cookie') ?? ''
-        const token = cookie.match(/session=([^;]+)/)?.[1]
-        if (!token) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { id: true, role: true } } },
-        })
-        if (!session || session.expiresAt < new Date() || session.user.role !== 'SUPER_ADMIN') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
+      .delete('/api/admin/logs/audit', async ({}) => {
         const { count } = await prisma.auditLog.deleteMany()
         appLog('info', `Audit logs cleared manually (${count} entries)`)
         return { ok: true, deleted: count }
       })
 
       // ─── Schema API (SUPER_ADMIN only) ──────────────────
-      .get('/api/admin/schema', async ({ request, set }) => {
-        const cookie = request.headers.get('cookie') ?? ''
-        const token = cookie.match(/session=([^;]+)/)?.[1]
-        if (!token) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { role: true } } },
-        })
-        if (!session || session.expiresAt < new Date() || session.user.role !== 'SUPER_ADMIN') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
-
+      .get('/api/admin/schema', async ({ set, authUser }) => {
+        const guard = guardSuperAdmin(authUser); if (guard) return guard
         const fs = await import('node:fs')
         const schemaPath = `${process.cwd()}/prisma/schema.prisma`
         if (!fs.existsSync(schemaPath)) {
@@ -559,280 +298,58 @@ export function createApp() {
       })
 
       // ─── Routes Metadata API (SUPER_ADMIN only) ─────────
-      .get('/api/admin/routes', async ({ request, set }) => {
-        const cookie = request.headers.get('cookie') ?? ''
-        const token = cookie.match(/session=([^;]+)/)?.[1]
-        if (!token) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { role: true } } },
-        })
-        if (!session || session.expiresAt < new Date() || session.user.role !== 'SUPER_ADMIN') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
-
+      .get('/api/admin/routes', ({}) => {
         const routes: { method: string; path: string; auth: string; category: string; description: string }[] = [
           // Frontend routes
           { method: 'PAGE', path: '/', auth: 'public', category: 'frontend', description: 'Landing page' },
-          {
-            method: 'PAGE',
-            path: '/login',
-            auth: 'public',
-            category: 'frontend',
-            description: 'Login page (email/password + Google OAuth)',
-          },
-          {
-            method: 'PAGE',
-            path: '/dev',
-            auth: 'superAdmin',
-            category: 'frontend',
-            description: 'Dev console (SUPER_ADMIN only)',
-          },
-          {
-            method: 'PAGE',
-            path: '/dashboard',
-            auth: 'admin',
-            category: 'frontend',
-            description: 'Admin dashboard (ADMIN+)',
-          },
-          {
-            method: 'PAGE',
-            path: '/profile',
-            auth: 'authenticated',
-            category: 'frontend',
-            description: 'User profile (all authenticated)',
-          },
-          {
-            method: 'PAGE',
-            path: '/blocked',
-            auth: 'authenticated',
-            category: 'frontend',
-            description: 'Blocked user info page',
-          },
-          // Auth
-          {
-            method: 'POST',
-            path: '/api/auth/login',
-            auth: 'public',
-            category: 'auth',
-            description: 'Email/password login',
-          },
-          {
-            method: 'POST',
-            path: '/api/auth/logout',
-            auth: 'authenticated',
-            category: 'auth',
-            description: 'Logout (delete session)',
-          },
-          {
-            method: 'GET',
-            path: '/api/auth/session',
-            auth: 'public',
-            category: 'auth',
-            description: 'Check current session',
-          },
-          {
-            method: 'GET',
-            path: '/api/auth/google',
-            auth: 'public',
-            category: 'auth',
-            description: 'Google OAuth redirect',
-          },
-          {
-            method: 'GET',
-            path: '/api/auth/callback/google',
-            auth: 'public',
-            category: 'auth',
-            description: 'Google OAuth callback',
-          },
+          { method: 'PAGE', path: '/login', auth: 'public', category: 'frontend', description: 'Login page (email/password + Google OAuth)' },
+          { method: 'PAGE', path: '/dev', auth: 'superAdmin', category: 'frontend', description: 'Dev console (SUPER_ADMIN only)' },
+          { method: 'PAGE', path: '/dashboard', auth: 'admin', category: 'frontend', description: 'Admin dashboard (ADMIN+)' },
+          { method: 'PAGE', path: '/profile', auth: 'authenticated', category: 'frontend', description: 'User profile (all authenticated)' },
+          { method: 'PAGE', path: '/blocked', auth: 'authenticated', category: 'frontend', description: 'Blocked user info page' },
+          // Auth (Better Auth native)
+          { method: 'POST', path: '/api/auth/sign-in/email', auth: 'public', category: 'auth', description: 'Email/password sign in' },
+          { method: 'POST', path: '/api/auth/sign-up/email', auth: 'public', category: 'auth', description: 'Email/password sign up' },
+          { method: 'POST', path: '/api/auth/sign-out', auth: 'authenticated', category: 'auth', description: 'Sign out (delete session)' },
+          { method: 'GET', path: '/api/auth/get-session', auth: 'public', category: 'auth', description: 'Get current session' },
+          { method: 'GET', path: '/api/auth/sign-in/social', auth: 'public', category: 'auth', description: 'Google OAuth redirect' },
+          { method: 'GET', path: '/api/auth/callback/google', auth: 'public', category: 'auth', description: 'Google OAuth callback' },
           // Dev Auth
-          {
-            method: 'GET',
-            path: '/api/dev-auth/login-as/:email',
-            auth: 'public',
-            category: 'auth',
-            description: 'Dev-only: login as any user by email (development only)',
-          },
+          { method: 'GET', path: '/api/dev-auth/login-as/:email', auth: 'public', category: 'auth', description: 'Dev-only: login as any user by email (development only)' },
           // Admin
-          {
-            method: 'GET',
-            path: '/api/admin/users',
-            auth: 'superAdmin',
-            category: 'admin',
-            description: 'List all users',
-          },
-          {
-            method: 'PUT',
-            path: '/api/admin/users/:id/role',
-            auth: 'superAdmin',
-            category: 'admin',
-            description: 'Change user role',
-          },
-          {
-            method: 'PUT',
-            path: '/api/admin/users/:id/block',
-            auth: 'superAdmin',
-            category: 'admin',
-            description: 'Block/unblock user',
-          },
-          {
-            method: 'GET',
-            path: '/api/admin/presence',
-            auth: 'superAdmin',
-            category: 'admin',
-            description: 'Online user IDs',
-          },
-          {
-            method: 'GET',
-            path: '/api/admin/logs/app',
-            auth: 'superAdmin',
-            category: 'admin',
-            description: 'App logs (Redis)',
-          },
-          {
-            method: 'GET',
-            path: '/api/admin/logs/audit',
-            auth: 'superAdmin',
-            category: 'admin',
-            description: 'Audit logs (DB)',
-          },
-          {
-            method: 'DELETE',
-            path: '/api/admin/logs/app',
-            auth: 'superAdmin',
-            category: 'admin',
-            description: 'Clear app logs',
-          },
-          {
-            method: 'DELETE',
-            path: '/api/admin/logs/audit',
-            auth: 'superAdmin',
-            category: 'admin',
-            description: 'Clear audit logs',
-          },
-          {
-            method: 'GET',
-            path: '/api/admin/schema',
-            auth: 'superAdmin',
-            category: 'admin',
-            description: 'Database schema (Prisma)',
-          },
-          {
-            method: 'GET',
-            path: '/api/admin/routes',
-            auth: 'superAdmin',
-            category: 'admin',
-            description: 'Routes metadata',
-          },
-          {
-            method: 'GET',
-            path: '/api/admin/project-structure',
-            auth: 'superAdmin',
-            category: 'admin',
-            description: 'Project file structure',
-          },
-          {
-            method: 'GET',
-            path: '/api/admin/env-map',
-            auth: 'superAdmin',
-            category: 'admin',
-            description: 'Environment variables map',
-          },
-          {
-            method: 'GET',
-            path: '/api/admin/test-coverage',
-            auth: 'superAdmin',
-            category: 'admin',
-            description: 'Test coverage mapping',
-          },
-          {
-            method: 'GET',
-            path: '/api/admin/dependencies',
-            auth: 'superAdmin',
-            category: 'admin',
-            description: 'NPM dependencies graph',
-          },
-          {
-            method: 'GET',
-            path: '/api/admin/migrations',
-            auth: 'superAdmin',
-            category: 'admin',
-            description: 'Migration timeline',
-          },
-          {
-            method: 'GET',
-            path: '/api/admin/sessions',
-            auth: 'superAdmin',
-            category: 'admin',
-            description: 'Active sessions (live)',
-          },
+          { method: 'GET', path: '/api/admin/users', auth: 'superAdmin', category: 'admin', description: 'List all users' },
+          { method: 'PUT', path: '/api/admin/users/:id/role', auth: 'superAdmin', category: 'admin', description: 'Change user role' },
+          { method: 'PUT', path: '/api/admin/users/:id/block', auth: 'superAdmin', category: 'admin', description: 'Block/unblock user' },
+          { method: 'GET', path: '/api/admin/presence', auth: 'superAdmin', category: 'admin', description: 'Online user IDs' },
+          { method: 'GET', path: '/api/admin/logs/app', auth: 'superAdmin', category: 'admin', description: 'App logs (Redis)' },
+          { method: 'GET', path: '/api/admin/logs/audit', auth: 'superAdmin', category: 'admin', description: 'Audit logs (DB)' },
+          { method: 'DELETE', path: '/api/admin/logs/app', auth: 'superAdmin', category: 'admin', description: 'Clear app logs' },
+          { method: 'DELETE', path: '/api/admin/logs/audit', auth: 'superAdmin', category: 'admin', description: 'Clear audit logs' },
+          { method: 'GET', path: '/api/admin/schema', auth: 'superAdmin', category: 'admin', description: 'Database schema (Prisma)' },
+          { method: 'GET', path: '/api/admin/routes', auth: 'superAdmin', category: 'admin', description: 'Routes metadata' },
+          { method: 'GET', path: '/api/admin/project-structure', auth: 'superAdmin', category: 'admin', description: 'Project file structure' },
+          { method: 'GET', path: '/api/admin/env-map', auth: 'superAdmin', category: 'admin', description: 'Environment variables map' },
+          { method: 'GET', path: '/api/admin/test-coverage', auth: 'superAdmin', category: 'admin', description: 'Test coverage mapping' },
+          { method: 'GET', path: '/api/admin/dependencies', auth: 'superAdmin', category: 'admin', description: 'NPM dependencies graph' },
+          { method: 'GET', path: '/api/admin/migrations', auth: 'superAdmin', category: 'admin', description: 'Migration timeline' },
+          { method: 'GET', path: '/api/admin/sessions', auth: 'superAdmin', category: 'admin', description: 'Active sessions (live)' },
           // Tickets
-          {
-            method: 'GET',
-            path: '/api/tickets',
-            auth: 'qcOrAdmin',
-            category: 'tickets',
-            description: 'List tickets (filter: status, priority, assigneeId)',
-          },
-          {
-            method: 'POST',
-            path: '/api/tickets',
-            auth: 'qcOrAdmin',
-            category: 'tickets',
-            description: 'Create ticket (QC/ADMIN/SUPER_ADMIN)',
-          },
-          {
-            method: 'GET',
-            path: '/api/tickets/:id',
-            auth: 'qcOrAdmin',
-            category: 'tickets',
-            description: 'Get ticket detail with comments and evidence',
-          },
-          {
-            method: 'PATCH',
-            path: '/api/tickets/:id',
-            auth: 'qcOrAdmin',
-            category: 'tickets',
-            description: 'Update ticket fields (role-based status transitions)',
-          },
-          {
-            method: 'POST',
-            path: '/api/tickets/:id/comments',
-            auth: 'qcOrAdmin',
-            category: 'tickets',
-            description: 'Add comment to ticket',
-          },
-          {
-            method: 'POST',
-            path: '/api/tickets/:id/evidence',
-            auth: 'qcOrAdmin',
-            category: 'tickets',
-            description: 'Attach evidence (screenshot, commit, test log)',
-          },
+          { method: 'GET', path: '/api/tickets', auth: 'qcOrAdmin', category: 'tickets', description: 'List tickets' },
+          { method: 'POST', path: '/api/tickets', auth: 'qcOrAdmin', category: 'tickets', description: 'Create ticket' },
+          { method: 'GET', path: '/api/tickets/:id', auth: 'qcOrAdmin', category: 'tickets', description: 'Get ticket detail' },
+          { method: 'PATCH', path: '/api/tickets/:id', auth: 'qcOrAdmin', category: 'tickets', description: 'Update ticket' },
+          { method: 'POST', path: '/api/tickets/:id/comments', auth: 'qcOrAdmin', category: 'tickets', description: 'Add comment' },
+          { method: 'POST', path: '/api/tickets/:id/evidence', auth: 'qcOrAdmin', category: 'tickets', description: 'Attach evidence' },
           // Utility
           { method: 'GET', path: '/health', auth: 'public', category: 'utility', description: 'Health check' },
-          { method: 'GET', path: '/api/version', auth: 'public', category: 'utility', description: 'App name and version from package.json' },
+          { method: 'GET', path: '/api/version', auth: 'public', category: 'utility', description: 'App version' },
           { method: 'GET', path: '/api/hello', auth: 'public', category: 'utility', description: 'Hello world (GET)' },
           { method: 'PUT', path: '/api/hello', auth: 'public', category: 'utility', description: 'Hello world (PUT)' },
-          {
-            method: 'GET',
-            path: '/api/hello/:name',
-            auth: 'public',
-            category: 'utility',
-            description: 'Hello with name param',
-          },
+          { method: 'GET', path: '/api/hello/:name', auth: 'public', category: 'utility', description: 'Hello with name param' },
           // WebSocket
-          {
-            method: 'WS',
-            path: '/ws/presence',
-            auth: 'authenticated',
-            category: 'realtime',
-            description: 'Real-time presence tracking',
-          },
+          { method: 'WS', path: '/ws/presence', auth: 'authenticated', category: 'realtime', description: 'Real-time presence tracking' },
+          // MCP
+          { method: 'ALL', path: '/mcp', auth: 'secret', category: 'mcp', description: 'MCP over HTTP (MCP_SECRET bearer)' },
         ]
 
         const byMethod: Record<string, number> = {}
@@ -846,27 +363,11 @@ export function createApp() {
 
         return {
           routes,
-          summary: { total: routes.length, byMethod, byAuth, byCategory },
-        }
+          summary: { total: routes.length, byMethod, byAuth, byCategory } }
       })
 
       // ─── Project Structure API (SUPER_ADMIN only) ──────
-      .get('/api/admin/project-structure', async ({ request, set }) => {
-        const cookie = request.headers.get('cookie') ?? ''
-        const token = cookie.match(/session=([^;]+)/)?.[1]
-        if (!token) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { role: true } } },
-        })
-        if (!session || session.expiresAt < new Date() || session.user.role !== 'SUPER_ADMIN') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
-
+      .get('/api/admin/project-structure', async ({}) => {
         const fs = await import('node:fs')
         const path = await import('node:path')
         const root = process.cwd()
@@ -910,7 +411,6 @@ export function createApp() {
           const exports: string[] = []
           const imports: { from: string; names: string[] }[] = []
 
-          // Parse exports
           for (const m of content.matchAll(
             /export\s+(?:default\s+)?(?:function|const|let|var|class|type|interface|enum)\s+(\w+)/g,
           )) {
@@ -925,32 +425,17 @@ export function createApp() {
             exports.push('default')
           }
 
-          // Parse imports
           for (const m of content.matchAll(
             /import\s+(?:\{([^}]+)\}|(\w+))(?:\s*,\s*\{([^}]+)\})?\s+from\s+['"]([^'"]+)['"]/g,
           )) {
             const names: string[] = []
-            if (m[1])
-              names.push(
-                ...m[1]
-                  .split(',')
-                  .map((s) => s.trim().split(' as ')[0].trim())
-                  .filter(Boolean),
-              )
+            if (m[1]) names.push(...m[1].split(',').map((s) => s.trim().split(' as ')[0].trim()).filter(Boolean))
             if (m[2]) names.push(m[2])
-            if (m[3])
-              names.push(
-                ...m[3]
-                  .split(',')
-                  .map((s) => s.trim().split(' as ')[0].trim())
-                  .filter(Boolean),
-              )
+            if (m[3]) names.push(...m[3].split(',').map((s) => s.trim().split(' as ')[0].trim()).filter(Boolean))
             let from = m[4]
-            // Resolve relative imports to project-relative paths
             if (from.startsWith('.')) {
               const dir = path.dirname(filePath)
               from = path.normalize(path.join(dir, from)).replace(/\\/g, '/')
-              // Try resolve extension
               for (const ext of ['.ts', '.tsx', '/index.ts', '/index.tsx']) {
                 if (fs.existsSync(path.join(root, from + ext))) {
                   from = from + ext
@@ -988,7 +473,6 @@ export function createApp() {
 
         for (const d of scanDirs) scan(d)
 
-        // Sort
         files.sort((a, b) => a.path.localeCompare(b.path))
         dirs.sort((a, b) => a.path.localeCompare(b.path))
 
@@ -1003,32 +487,15 @@ export function createApp() {
         return {
           files,
           directories: dirs,
-          summary: { totalFiles: files.length, totalLines, totalExports, totalImports, byCategory },
-        }
+          summary: { totalFiles: files.length, totalLines, totalExports, totalImports, byCategory } }
       })
 
       // ─── Environment Map API (SUPER_ADMIN only) ─────────
-      .get('/api/admin/env-map', async ({ request, set }) => {
-        const cookie = request.headers.get('cookie') ?? ''
-        const token = cookie.match(/session=([^;]+)/)?.[1]
-        if (!token) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { role: true } } },
-        })
-        if (!session || session.expiresAt < new Date() || session.user.role !== 'SUPER_ADMIN') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
-
+      .get('/api/admin/env-map', async ({}) => {
         const fs = await import('node:fs')
         const path = await import('node:path')
         const root = process.cwd()
 
-        // Define all env variables used in the project
         const envDefs: {
           name: string
           envKey: string
@@ -1037,90 +504,20 @@ export function createApp() {
           category: string
           description: string
         }[] = [
-          {
-            name: 'DATABASE_URL',
-            envKey: 'DATABASE_URL',
-            required: true,
-            default: null,
-            category: 'database',
-            description: 'PostgreSQL connection string',
-          },
-          {
-            name: 'REDIS_URL',
-            envKey: 'REDIS_URL',
-            required: true,
-            default: null,
-            category: 'cache',
-            description: 'Redis connection string',
-          },
-          {
-            name: 'GOOGLE_CLIENT_ID',
-            envKey: 'GOOGLE_CLIENT_ID',
-            required: true,
-            default: null,
-            category: 'auth',
-            description: 'Google OAuth client ID',
-          },
-          {
-            name: 'GOOGLE_CLIENT_SECRET',
-            envKey: 'GOOGLE_CLIENT_SECRET',
-            required: true,
-            default: null,
-            category: 'auth',
-            description: 'Google OAuth client secret',
-          },
-          {
-            name: 'SUPER_ADMIN_EMAIL',
-            envKey: 'SUPER_ADMIN_EMAIL',
-            required: false,
-            default: '(empty)',
-            category: 'auth',
-            description: 'Comma-separated emails to auto-promote to SUPER_ADMIN',
-          },
-          {
-            name: 'PORT',
-            envKey: 'PORT',
-            required: false,
-            default: '3000',
-            category: 'app',
-            description: 'Server port',
-          },
-          {
-            name: 'NODE_ENV',
-            envKey: 'NODE_ENV',
-            required: false,
-            default: 'development',
-            category: 'app',
-            description: 'Environment mode',
-          },
-          {
-            name: 'REACT_EDITOR',
-            envKey: 'REACT_EDITOR',
-            required: false,
-            default: 'code',
-            category: 'app',
-            description: 'Editor for click-to-source',
-          },
-          {
-            name: 'AUDIT_LOG_RETENTION_DAYS',
-            envKey: 'AUDIT_LOG_RETENTION_DAYS',
-            required: false,
-            default: '90',
-            category: 'app',
-            description: 'Days to keep audit logs',
-          },
+          { name: 'DATABASE_URL', envKey: 'DATABASE_URL', required: true, default: null, category: 'database', description: 'PostgreSQL connection string' },
+          { name: 'REDIS_URL', envKey: 'REDIS_URL', required: true, default: null, category: 'cache', description: 'Redis connection string' },
+          { name: 'GOOGLE_CLIENT_ID', envKey: 'GOOGLE_CLIENT_ID', required: true, default: null, category: 'auth', description: 'Google OAuth client ID' },
+          { name: 'GOOGLE_CLIENT_SECRET', envKey: 'GOOGLE_CLIENT_SECRET', required: true, default: null, category: 'auth', description: 'Google OAuth client secret' },
+          { name: 'BETTER_AUTH_SECRET', envKey: 'BETTER_AUTH_SECRET', required: true, default: null, category: 'auth', description: 'Better Auth encryption secret (min 32 chars)' },
+          { name: 'BETTER_AUTH_URL', envKey: 'BETTER_AUTH_URL', required: false, default: 'http://localhost:3000', category: 'auth', description: 'Better Auth base URL (production URL)' },
+          { name: 'SUPER_ADMIN_EMAIL', envKey: 'SUPER_ADMIN_EMAIL', required: false, default: '(empty)', category: 'auth', description: 'Comma-separated emails to auto-promote to SUPER_ADMIN' },
+          { name: 'PORT', envKey: 'PORT', required: false, default: '3000', category: 'app', description: 'Server port' },
+          { name: 'NODE_ENV', envKey: 'NODE_ENV', required: false, default: 'development', category: 'app', description: 'Environment mode' },
+          { name: 'REACT_EDITOR', envKey: 'REACT_EDITOR', required: false, default: 'code', category: 'app', description: 'Editor for click-to-source' },
+          { name: 'AUDIT_LOG_RETENTION_DAYS', envKey: 'AUDIT_LOG_RETENTION_DAYS', required: false, default: '90', category: 'app', description: 'Days to keep audit logs' },
         ]
 
-        // Scan files for env usage
-        const srcFiles = [
-          'src/lib/env.ts',
-          'src/lib/db.ts',
-          'src/lib/redis.ts',
-          'src/lib/applog.ts',
-          'src/app.ts',
-          'src/index.tsx',
-          'src/vite.ts',
-        ]
+        const srcFiles = ['src/lib/env.ts', 'src/lib/db.ts', 'src/lib/redis.ts', 'src/lib/applog.ts', 'src/lib/auth.ts', 'src/app.ts', 'src/index.tsx', 'src/vite.ts']
         const fileContents: Record<string, string> = {}
         for (const f of srcFiles) {
           const absPath = path.join(root, f)
@@ -1134,20 +531,11 @@ export function createApp() {
               usedBy.push(file)
             }
           }
-          return {
-            name: def.name,
-            required: def.required,
-            isSet: !!process.env[def.envKey],
-            default: def.default,
-            category: def.category,
-            description: def.description,
-            usedBy,
-          }
+          return { name: def.name, required: def.required, isSet: !!process.env[def.envKey], default: def.default, category: def.category, description: def.description, usedBy }
         })
 
         const byCategory: Record<string, number> = {}
-        let setCount = 0
-        let requiredCount = 0
+        let setCount = 0, requiredCount = 0
         for (const v of variables) {
           byCategory[v.category] = (byCategory[v.category] || 0) + 1
           if (v.isSet) setCount++
@@ -1156,52 +544,19 @@ export function createApp() {
 
         return {
           variables,
-          summary: {
-            total: variables.length,
-            set: setCount,
-            unset: variables.length - setCount,
-            required: requiredCount,
-            byCategory,
-          },
-        }
+          summary: { total: variables.length, set: setCount, unset: variables.length - setCount, required: requiredCount, byCategory } }
       })
 
       // ─── Test Coverage Map API (SUPER_ADMIN only) ──────
-      .get('/api/admin/test-coverage', async ({ request, set }) => {
-        const cookie = request.headers.get('cookie') ?? ''
-        const token = cookie.match(/session=([^;]+)/)?.[1]
-        if (!token) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { role: true } } },
-        })
-        if (!session || session.expiresAt < new Date() || session.user.role !== 'SUPER_ADMIN') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
-
+      .get('/api/admin/test-coverage', async ({}) => {
         const fs = await import('node:fs')
         const pathMod = await import('node:path')
         const root = process.cwd()
         const exts = new Set(['.ts', '.tsx'])
         const skipDirs = new Set(['node_modules', 'dist', 'generated', '.git'])
 
-        interface SrcFile {
-          path: string
-          lines: number
-          exports: string[]
-          testedBy: string[]
-          coverage: string
-        }
-        interface TestFile {
-          path: string
-          lines: number
-          type: string
-          targets: string[]
-        }
+        interface SrcFile { path: string; lines: number; exports: string[]; testedBy: string[]; coverage: string }
+        interface TestFile { path: string; lines: number; type: string; targets: string[] }
 
         function scanDir(dir: string, collect: string[]) {
           const abs = pathMod.join(root, dir)
@@ -1222,35 +577,27 @@ export function createApp() {
         scanDir('tests', testPaths)
         const testFiltered = testPaths.filter((f) => f.includes('.test.'))
 
-        // Parse test files
         const testFiles: TestFile[] = testFiltered.map((tp) => {
           const content = fs.readFileSync(pathMod.join(root, tp), 'utf-8')
           const lines = content.split('\n').length
           const type = tp.includes('/unit/') ? 'unit' : tp.includes('/integration/') ? 'integration' : 'other'
           const targets: string[] = []
-          // Direct imports
           for (const m of content.matchAll(/from\s+['"]([^'"]*(?:src|lib)[^'"]*)['"]/g)) {
             let resolved = m[1].replace(/^.*?src\//, 'src/')
             if (resolved.startsWith('.')) {
               resolved = pathMod.normalize(pathMod.join(pathMod.dirname(tp), resolved)).replace(/\\/g, '/')
             }
-            // Try resolve
             for (const ext of ['', '.ts', '.tsx']) {
               const full = resolved + ext
-              if (srcFiltered.includes(full)) {
-                targets.push(full)
-                break
-              }
+              if (srcFiltered.includes(full)) { targets.push(full); break }
             }
           }
-          // API fetch patterns → app.ts
           if (/fetch\(['"`]\/api\//.test(content) || /createApp|createTestApp/.test(content)) {
             if (!targets.includes('src/app.ts')) targets.push('src/app.ts')
           }
           return { path: tp, lines, type, targets: [...new Set(targets)] }
         })
 
-        // Build source file info
         const testedByMap: Record<string, string[]> = {}
         for (const t of testFiles) {
           for (const target of t.targets) {
@@ -1263,9 +610,7 @@ export function createApp() {
           const content = fs.readFileSync(pathMod.join(root, sp), 'utf-8')
           const lines = content.split('\n').length
           const exports: string[] = []
-          for (const m of content.matchAll(
-            /export\s+(?:default\s+)?(?:function|const|let|var|class|type|interface|enum)\s+(\w+)/g,
-          )) {
+          for (const m of content.matchAll(/export\s+(?:default\s+)?(?:function|const|let|var|class|type|interface|enum)\s+(\w+)/g)) {
             exports.push(m[1])
           }
           const tb = testedByMap[sp] || []
@@ -1281,69 +626,30 @@ export function createApp() {
           sourceFiles,
           testFiles,
           summary: {
-            totalSource: sourceFiles.length,
-            totalTests: testFiles.length,
-            covered,
-            partial,
-            uncovered,
-            coveragePercent: Math.round(((covered + partial * 0.5) / sourceFiles.length) * 100),
-          },
-        }
+            totalSource: sourceFiles.length, totalTests: testFiles.length, covered, partial, uncovered,
+            coveragePercent: Math.round(((covered + partial * 0.5) / sourceFiles.length) * 100) } }
       })
 
       // ─── Dependencies Graph API (SUPER_ADMIN only) ─────
-      .get('/api/admin/dependencies', async ({ request, set }) => {
-        const cookie = request.headers.get('cookie') ?? ''
-        const token = cookie.match(/session=([^;]+)/)?.[1]
-        if (!token) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { role: true } } },
-        })
-        if (!session || session.expiresAt < new Date() || session.user.role !== 'SUPER_ADMIN') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
-
+      .get('/api/admin/dependencies', async ({}) => {
         const fs = await import('node:fs')
         const pathMod = await import('node:path')
         const root = process.cwd()
         const pkgPath = pathMod.join(root, 'package.json')
-        if (!fs.existsSync(pkgPath)) {
-          set.status = 404
-          return { error: 'package.json not found' }
-        }
+        if (!fs.existsSync(pkgPath)) return { error: 'package.json not found' }
 
-        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
-        const deps: Record<string, string> = pkg.dependencies || {}
-        const devDeps: Record<string, string> = pkg.devDependencies || {}
+        const pkgJson = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+        const deps: Record<string, string> = pkgJson.dependencies || {}
+        const devDeps: Record<string, string> = pkgJson.devDependencies || {}
 
-        // Categorize packages
         const catMap: Record<string, string> = {
-          elysia: 'server',
-          '@elysiajs/cors': 'server',
-          '@elysiajs/html': 'server',
-          react: 'ui',
-          'react-dom': 'ui',
-          '@mantine/core': 'ui',
-          '@mantine/hooks': 'ui',
-          '@tanstack/react-router': 'ui',
-          '@tanstack/react-query': 'ui',
-          '@xyflow/react': 'ui',
-          'react-icons': 'ui',
-          '@prisma/client': 'database',
-          prisma: 'database',
-          vite: 'build',
-          typescript: 'build',
-          '@biomejs/biome': 'build',
-          '@vitejs/plugin-react': 'build',
-          '@tanstack/router-plugin': 'build',
-        }
+          elysia: 'server', '@elysiajs/cors': 'server', '@elysiajs/html': 'server',
+          'better-auth': 'auth',
+          react: 'ui', 'react-dom': 'ui', '@mantine/core': 'ui', '@mantine/hooks': 'ui',
+          '@tanstack/react-router': 'ui', '@tanstack/react-query': 'ui', '@xyflow/react': 'ui', 'react-icons': 'ui',
+          '@prisma/client': 'database', prisma: 'database',
+          vite: 'build', typescript: 'build', '@biomejs/biome': 'build', '@vitejs/plugin-react': 'build' }
 
-        // Scan source for package imports
         const srcFiles: string[] = []
         function scanSrc(dir: string) {
           const abs = pathMod.join(root, dir)
@@ -1358,9 +664,7 @@ export function createApp() {
         scanSrc('src')
 
         const fileContents: Record<string, string> = {}
-        for (const f of srcFiles) {
-          fileContents[f] = fs.readFileSync(pathMod.join(root, f), 'utf-8')
-        }
+        for (const f of srcFiles) { fileContents[f] = fs.readFileSync(pathMod.join(root, f), 'utf-8') }
 
         const allPkgs: { name: string; version: string; type: string; category: string; usedBy: string[] }[] = []
 
@@ -1378,47 +682,25 @@ export function createApp() {
         }
 
         const byCategory: Record<string, number> = {}
-        let runtime = 0,
-          dev = 0
+        let runtime = 0, dev = 0
         for (const p of allPkgs) {
           byCategory[p.category] = (byCategory[p.category] || 0) + 1
           if (p.type === 'runtime') runtime++
           else dev++
         }
 
-        return {
-          packages: allPkgs,
-          summary: { total: allPkgs.length, runtime, dev, byCategory },
-        }
+        return { packages: allPkgs, summary: { total: allPkgs.length, runtime, dev, byCategory } }
       })
 
       // ─── Migrations Timeline API (SUPER_ADMIN only) ────
-      .get('/api/admin/migrations', async ({ request, set }) => {
-        const cookie = request.headers.get('cookie') ?? ''
-        const token = cookie.match(/session=([^;]+)/)?.[1]
-        if (!token) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { role: true } } },
-        })
-        if (!session || session.expiresAt < new Date() || session.user.role !== 'SUPER_ADMIN') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
-
+      .get('/api/admin/migrations', async ({}) => {
         const fs = await import('node:fs')
         const pathMod = await import('node:path')
         const root = process.cwd()
         const migrationsDir = pathMod.join(root, 'prisma/migrations')
 
         if (!fs.existsSync(migrationsDir)) {
-          return {
-            migrations: [],
-            summary: { totalMigrations: 0, firstMigration: null, lastMigration: null, totalChanges: 0 },
-          }
+          return { migrations: [], summary: { totalMigrations: 0, firstMigration: null, lastMigration: null, totalChanges: 0 } }
         }
 
         const entries = fs
@@ -1433,25 +715,21 @@ export function createApp() {
 
           if (fs.existsSync(sqlPath)) {
             sql = fs.readFileSync(sqlPath, 'utf-8')
-            // Extract change summaries
             for (const m of sql.matchAll(
               /^(CREATE TABLE|ALTER TABLE|CREATE INDEX|CREATE UNIQUE INDEX|DROP TABLE|DROP INDEX|CREATE TYPE|ALTER TYPE)\s+["']?(\w+)["']?/gim,
             )) {
               changes.push(`${m[1]} ${m[2]}`)
             }
-            // Also catch Prisma enum creation pattern
             for (const m of sql.matchAll(/CREATE TYPE\s+"(\w+)"/g)) {
               if (!changes.some((c) => c.includes(m[1]))) changes.push(`CREATE TYPE ${m[1]}`)
             }
           }
 
-          // Parse date from folder name: YYYYMMDDHHMMSS_name
           const dateStr = entry.name.substring(0, 14)
           const createdAt = new Date(
             `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}T${dateStr.slice(8, 10)}:${dateStr.slice(10, 12)}:${dateStr.slice(12, 14)}.000Z`,
           ).toISOString()
-
-          const name = entry.name.substring(15) // Remove timestamp prefix + underscore
+          const name = entry.name.substring(15)
 
           return { name, folder: entry.name, createdAt, changes, sql: sql.substring(0, 800) }
         })
@@ -1464,33 +742,15 @@ export function createApp() {
             totalMigrations: migrations.length,
             firstMigration: migrations[0]?.createdAt || null,
             lastMigration: migrations[migrations.length - 1]?.createdAt || null,
-            totalChanges,
-          },
-        }
+            totalChanges } }
       })
 
       // ─── Sessions Live API (SUPER_ADMIN only) ──────────
-      .get('/api/admin/sessions', async ({ request, set }) => {
-        const cookie = request.headers.get('cookie') ?? ''
-        const token = cookie.match(/session=([^;]+)/)?.[1]
-        if (!token) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        const session = await prisma.session.findUnique({
-          where: { token },
-          include: { user: { select: { role: true } } },
-        })
-        if (!session || session.expiresAt < new Date() || session.user.role !== 'SUPER_ADMIN') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
-
+      .get('/api/admin/sessions', async ({}) => {
         const onlineIds = new Set(getOnlineUserIds())
         const sessions = await prisma.session.findMany({
           include: { user: { select: { id: true, name: true, email: true, role: true, blocked: true } } },
-          orderBy: { createdAt: 'desc' },
-        })
+          orderBy: { createdAt: 'desc' } })
 
         const now = new Date()
         const result = sessions.map((s) => ({
@@ -1503,13 +763,11 @@ export function createApp() {
           isOnline: onlineIds.has(s.user.id),
           createdAt: s.createdAt.toISOString(),
           expiresAt: s.expiresAt.toISOString(),
-          isExpired: s.expiresAt < now,
-        }))
+          isExpired: s.expiresAt < now }))
 
         const byRole: Record<string, number> = {}
         const uniqueUsers = new Set<string>()
-        let active = 0,
-          expired = 0
+        let active = 0, expired = 0
         for (const s of result) {
           uniqueUsers.add(s.userId)
           byRole[s.userRole] = (byRole[s.userRole] || 0) + 1
@@ -1519,59 +777,32 @@ export function createApp() {
 
         return {
           sessions: result,
-          summary: {
-            totalSessions: result.length,
-            activeSessions: active,
-            expiredSessions: expired,
-            onlineUsers: onlineIds.size,
-            byRole,
-          },
-        }
+          summary: { totalSessions: result.length, activeSessions: active, expiredSessions: expired, onlineUsers: onlineIds.size, byRole } }
       })
 
       // ─── Tickets API ──────────────────────────────────
-      .get('/api/tickets', async ({ request, query, set }) => {
-        const auth = await requireAuth(request)
-        if (!auth) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        if (auth.role === 'USER') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
-
+      .get('/api/tickets', async ({ query, authUser }) => {
+        const guard = guardQcOrAdmin(authUser); if (guard) return guard
         const where: Record<string, unknown> = {}
         if (query.status) where.status = String(query.status)
         if (query.priority) where.priority = String(query.priority)
         if (query.assigneeId) where.assigneeId = String(query.assigneeId)
         if (query.reporterId) where.reporterId = String(query.reporterId)
-        if (query.mine === '1') where.assigneeId = auth.userId
+        if (query.mine === '1') where.assigneeId = authUser!.id
 
         const tickets = await prisma.ticket.findMany({
           where,
           include: {
             reporter: { select: { id: true, name: true, email: true, role: true } },
             assignee: { select: { id: true, name: true, email: true, role: true } },
-            _count: { select: { comments: true, evidence: true } },
-          },
+            _count: { select: { comments: true, evidence: true } } },
           orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
-          take: Math.min(Number(query.limit) || 100, 500),
-        })
+          take: Math.min(Number(query.limit) || 100, 500) })
         return { tickets }
       })
 
-      .get('/api/tickets/:id', async ({ request, params, set }) => {
-        const auth = await requireAuth(request)
-        if (!auth) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        if (auth.role === 'USER') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
-
+      .get('/api/tickets/:id', async ({ params, set, authUser }) => {
+        const guard = guardQcOrAdmin(authUser); if (guard) return guard
         const ticket = await prisma.ticket.findUnique({
           where: { id: params.id },
           include: {
@@ -1579,11 +810,8 @@ export function createApp() {
             assignee: { select: { id: true, name: true, email: true, role: true } },
             comments: {
               include: { author: { select: { id: true, name: true, email: true, role: true } } },
-              orderBy: { createdAt: 'asc' },
-            },
-            evidence: { orderBy: { createdAt: 'asc' } },
-          },
-        })
+              orderBy: { createdAt: 'asc' } },
+            evidence: { orderBy: { createdAt: 'asc' } } } })
         if (!ticket) {
           set.status = 404
           return { error: 'Ticket not found' }
@@ -1591,16 +819,8 @@ export function createApp() {
         return { ticket }
       })
 
-      .post('/api/tickets', async ({ request, set }) => {
-        const auth = await requireAuth(request)
-        if (!auth) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        if (!['QC', 'ADMIN', 'SUPER_ADMIN'].includes(auth.role)) {
-          set.status = 403
-          return { error: 'Hanya QC/ADMIN yang bisa membuat tiket' }
-        }
+      .post('/api/tickets', async ({ request, set, authUser }) => {
+        const guard = guardQcOrAdmin(authUser); if (guard) return guard
         const body = (await request.json()) as {
           title?: string
           description?: string
@@ -1618,26 +838,15 @@ export function createApp() {
             description: body.description,
             priority: (body.priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') ?? 'MEDIUM',
             route: body.route ?? null,
-            reporterId: auth.userId,
-            assigneeId: body.assigneeId ?? null,
-          },
-        })
-        audit(auth.userId, 'TICKET_CREATED', `#${ticket.id} ${ticket.title}`, getIp(request))
-        appLog('info', `Ticket created: ${ticket.title} by ${auth.email}`)
+            reporterId: authUser!.id,
+            assigneeId: body.assigneeId ?? null } })
+        audit(authUser!.id, 'TICKET_CREATED', `#${ticket.id} ${ticket.title}`, getIp(request))
+        appLog('info', `Ticket created: ${ticket.title} by ${authUser!.email}`)
         return { ticket }
       })
 
-      .patch('/api/tickets/:id', async ({ request, params, set }) => {
-        const auth = await requireAuth(request)
-        if (!auth) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        if (auth.role === 'USER') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
-
+      .patch('/api/tickets/:id', async ({ request, params, set, authUser }) => {
+        const guard = guardQcOrAdmin(authUser); if (guard) return guard
         const current = await prisma.ticket.findUnique({ where: { id: params.id } })
         if (!current) {
           set.status = 404
@@ -1662,12 +871,10 @@ export function createApp() {
         if (body.assigneeId !== undefined) data.assigneeId = body.assigneeId
 
         if (body.status !== undefined) {
-          const allowed = getAllowedStatusTransitions(current.status, auth.role as 'QC' | 'ADMIN' | 'SUPER_ADMIN')
+          const allowed = getAllowedStatusTransitions(current.status, authUser!.role as 'QC' | 'ADMIN' | 'SUPER_ADMIN')
           if (!allowed.includes(body.status)) {
             set.status = 400
-            return {
-              error: `Transisi status tidak diizinkan untuk role ${auth.role}: ${current.status} → ${body.status}`,
-            }
+            return { error: `Transisi status tidak diizinkan untuk role ${authUser!.role}: ${current.status} → ${body.status}` }
           }
           data.status = body.status
           if (body.status === 'CLOSED') data.closedAt = new Date()
@@ -1675,21 +882,12 @@ export function createApp() {
         }
 
         const ticket = await prisma.ticket.update({ where: { id: params.id }, data })
-        audit(auth.userId, 'TICKET_UPDATED', `#${ticket.id} ${Object.keys(data).join(',')}`, getIp(request))
+        audit(authUser!.id, 'TICKET_UPDATED', `#${ticket.id} ${Object.keys(data).join(',')}`, getIp(request))
         return { ticket }
       })
 
-      .post('/api/tickets/:id/comments', async ({ request, params, set }) => {
-        const auth = await requireAuth(request)
-        if (!auth) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        if (auth.role === 'USER') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
-
+      .post('/api/tickets/:id/comments', async ({ request, params, set, authUser }) => {
+        const guard = guardQcOrAdmin(authUser); if (guard) return guard
         const ticket = await prisma.ticket.findUnique({ where: { id: params.id }, select: { id: true } })
         if (!ticket) {
           set.status = 404
@@ -1705,26 +903,15 @@ export function createApp() {
         const comment = await prisma.ticketComment.create({
           data: {
             ticketId: params.id,
-            authorId: auth.userId,
-            authorTag: auth.role === 'QC' ? 'QC' : auth.role === 'ADMIN' ? 'ADMIN' : 'SUPER_ADMIN',
-            body,
-          },
-          include: { author: { select: { id: true, name: true, email: true, role: true } } },
-        })
+            authorId: authUser!.id,
+            authorTag: authUser!.role === 'QC' ? 'QC' : authUser!.role === 'ADMIN' ? 'ADMIN' : 'SUPER_ADMIN',
+            body },
+          include: { author: { select: { id: true, name: true, email: true, role: true } } } })
         return { comment }
       })
 
-      .post('/api/tickets/:id/evidence', async ({ request, params, set }) => {
-        const auth = await requireAuth(request)
-        if (!auth) {
-          set.status = 401
-          return { error: 'Unauthorized' }
-        }
-        if (auth.role === 'USER') {
-          set.status = 403
-          return { error: 'Forbidden' }
-        }
-
+      .post('/api/tickets/:id/evidence', async ({ request, params, set, authUser }) => {
+        const guard = guardQcOrAdmin(authUser); if (guard) return guard
         const ticket = await prisma.ticket.findUnique({ where: { id: params.id }, select: { id: true } })
         if (!ticket) {
           set.status = 404
@@ -1738,8 +925,7 @@ export function createApp() {
         }
 
         const evidence = await prisma.ticketEvidence.create({
-          data: { ticketId: params.id, kind: body.kind, url: body.url, note: body.note ?? null },
-        })
+          data: { ticketId: params.id, kind: body.kind, url: body.url, note: body.note ?? null } })
         return { evidence }
       })
 
@@ -1748,8 +934,7 @@ export function createApp() {
         if (!env.MCP_SECRET && !env.MCP_SECRET_ADMIN) {
           return new Response(JSON.stringify({ error: 'MCP not configured: set MCP_SECRET and/or MCP_SECRET_ADMIN' }), {
             status: 503,
-            headers: { 'Content-Type': 'application/json' },
-          })
+            headers: { 'Content-Type': 'application/json' } })
         }
         const header = request.headers.get('authorization') ?? ''
         const bearer = header.replace(/^Bearer\s+/i, '').trim()
@@ -1761,13 +946,11 @@ export function createApp() {
           appLog('warn', `MCP unauthorized from ${getIp(request)}`)
           return new Response(JSON.stringify({ error: 'Unauthorized' }), {
             status: 401,
-            headers: { 'Content-Type': 'application/json', 'WWW-Authenticate': 'Bearer' },
-          })
+            headers: { 'Content-Type': 'application/json', 'WWW-Authenticate': 'Bearer' } })
         }
         const transport = new WebStandardStreamableHTTPServerTransport({
           sessionIdGenerator: undefined,
-          enableJsonResponse: true,
-        })
+          enableJsonResponse: true })
         const mcp = createMcpServer(scope)
         await mcp.connect(transport)
         const response = await transport.handleRequest(request)
@@ -1779,20 +962,11 @@ export function createApp() {
       // ─── Version ─────────────────────────────────────────
       .get('/api/version', () => ({
         name: pkg.name,
-        version: pkg.version,
-      }))
+        version: pkg.version }))
 
       // ─── Example API ───────────────────────────────────
-      .get('/api/hello', () => ({
-        message: 'Hello, world!',
-        method: 'GET',
-      }))
-      .put('/api/hello', () => ({
-        message: 'Hello, world!',
-        method: 'PUT',
-      }))
-      .get('/api/hello/:name', ({ params }) => ({
-        message: `Hello, ${params.name}!`,
-      }))
+      .get('/api/hello', () => ({ message: 'Hello, world!', method: 'GET' }))
+      .put('/api/hello', () => ({ message: 'Hello, world!', method: 'PUT' }))
+      .get('/api/hello/:name', ({ params }) => ({ message: `Hello, ${params.name}!` }))
   )
 }

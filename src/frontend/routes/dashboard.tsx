@@ -48,6 +48,7 @@ import {
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { TicketsPanel } from '@/frontend/components/TicketsPanel'
 import { useLogout, useSession } from '@/frontend/hooks/useAuth'
+import { authClient } from '@/lib/auth-client'
 import { rootRoute } from './__root'
 
 const validTabs = ['dashboard', 'tickets', 'analytics', 'orders', 'messages', 'calendar', 'settings'] as const
@@ -62,13 +63,17 @@ export const dashboardRoute = createRoute({
     try {
       const data = await context.queryClient.ensureQueryData({
         queryKey: ['auth', 'session'],
-        queryFn: () => fetch('/api/auth/session', { credentials: 'include' }).then((r) => r.json()),
+        queryFn: async () => {
+          const session = await authClient.getSession()
+          return session.data ? { user: session.data.user } : { user: null }
+        },
       })
       if (!data?.user) throw redirect({ to: '/login' })
-      if (data.user.blocked) throw redirect({ to: '/blocked' })
-      if (data.user.role === 'USER') throw redirect({ to: '/profile' })
+      const user = data.user as any
+      if (user.blocked) throw redirect({ to: '/blocked' })
+      if (user.role === 'USER') throw redirect({ to: '/profile' })
       const search = window.location.search
-      if (data.user.role === 'QC' && !search.includes('tab=')) {
+      if (user.role === 'QC' && !search.includes('tab=')) {
         throw redirect({ to: '/dashboard', search: { tab: 'tickets' } })
       }
     } catch (e) {

@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { FcGoogle } from 'react-icons/fc'
 import { TbAlertCircle, TbLock, TbLogin, TbMail } from 'react-icons/tb'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
-import { getDefaultRoute, useLogin } from '@/frontend/hooks/useAuth'
+import { getDefaultRoute } from '@/frontend/hooks/useAuth'
+import { authClient } from '@/lib/auth-client'
 import { rootRoute } from './__root'
 
 export const loginRoute = createRoute({
@@ -18,10 +19,14 @@ export const loginRoute = createRoute({
     try {
       const data = await context.queryClient.ensureQueryData({
         queryKey: ['auth', 'session'],
-        queryFn: () => fetch('/api/auth/session', { credentials: 'include' }).then((r) => r.json()),
+        queryFn: async () => {
+          const session = await authClient.getSession()
+          return session.data ? { user: session.data.user } : { user: null }
+        },
       })
       if (data?.user) {
-        throw redirect({ to: getDefaultRoute(data.user.role) })
+        const user = data.user as any
+        throw redirect({ to: getDefaultRoute((user.role ?? 'USER') as any) })
       }
     } catch (e) {
       if (e instanceof Error) return
@@ -32,14 +37,34 @@ export const loginRoute = createRoute({
 })
 
 function LoginPage() {
-  const login = useLogin()
   const { error: searchError } = loginRoute.useSearch()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [loginError, setLoginError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    login.mutate({ email, password })
+    setIsLoading(true)
+    setLoginError(null)
+
+    const result = await authClient.signIn.email({ email, password })
+
+    if (result.error) {
+      setLoginError(result.error.message ?? 'Email atau password salah')
+      setIsLoading(false)
+      return
+    }
+
+    const user = result.data?.user as any
+    if (user) {
+      window.location.href = getDefaultRoute((user.role ?? 'USER') as any)
+    }
+    setIsLoading(false)
+  }
+
+  const handleGoogleLogin = () => {
+    authClient.signIn.social({ provider: 'google' })
   }
 
   return (
@@ -62,9 +87,9 @@ function LoginPage() {
               User: <strong>user@example.com</strong> / <strong>user123</strong>
             </Text>
 
-            {(login.isError || searchError) && (
+            {(loginError || searchError) && (
               <Alert icon={<TbAlertCircle size={16} />} color="red" variant="light">
-                {login.isError ? login.error.message : 'Login dengan Google gagal, coba lagi.'}
+                {loginError ?? 'Login dengan Google gagal, coba lagi.'}
               </Alert>
             )}
 
@@ -86,18 +111,18 @@ function LoginPage() {
               required
             />
 
-            <Button type="submit" fullWidth leftSection={<TbLogin size={18} />} loading={login.isPending}>
+            <Button type="submit" fullWidth leftSection={<TbLogin size={18} />} loading={isLoading}>
               Sign in
             </Button>
 
             <Divider label="atau" labelPosition="center" />
 
             <Button
-              component="a"
-              href="/api/auth/google"
+              onClick={handleGoogleLogin}
               fullWidth
               variant="default"
               leftSection={<FcGoogle size={18} />}
+              type="button"
             >
               Login dengan Google
             </Button>
