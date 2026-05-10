@@ -18,7 +18,7 @@ import {
   Title,
   Tooltip,
 } from '@mantine/core'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { TbBug, TbCheck, TbChevronRight, TbMessagePlus, TbPaperclip, TbPlus, TbRefresh, TbRotate } from 'react-icons/tb'
 import { type Role, useSession } from '@/frontend/hooks/useAuth'
@@ -105,21 +105,28 @@ export function TicketsPanel() {
   const queryClient = useQueryClient()
 
   const {
-    data: list,
+    data: ticketsData,
     isLoading,
     refetch,
     isFetching,
-  } = useQuery({
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ['tickets', statusFilter],
-    queryFn: () => {
-      const qs = new URLSearchParams()
+    queryFn: ({ pageParam }) => {
+      const qs = new URLSearchParams({ limit: '50' })
       if (statusFilter !== 'active' && statusFilter !== 'all') qs.set('status', statusFilter)
-      return api<{ tickets: TicketListItem[] }>(`/api/tickets${qs.toString() ? `?${qs}` : ''}`)
+      if (pageParam) qs.set('cursor', pageParam)
+      return api<{ tickets: TicketListItem[]; nextCursor?: string }>(`/api/tickets?${qs}`)
     },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
     refetchInterval: 15_000,
   })
 
-  const tickets = (list?.tickets ?? []).filter((t) => {
+  const allTickets = (ticketsData?.pages ?? []).flatMap((p: { tickets: TicketListItem[] }) => p.tickets)
+  const tickets = allTickets.filter((t) => {
     if (statusFilter === 'active') return t.status !== 'CLOSED'
     return true
   })
@@ -254,6 +261,19 @@ export function TicketsPanel() {
             </Table.Tbody>
           </Table>
         </Card>
+
+        {hasNextPage && (
+          <Group justify="center">
+            <Button
+              variant="light"
+              size="xs"
+              onClick={() => fetchNextPage()}
+              loading={isFetchingNextPage}
+            >
+              Load more
+            </Button>
+          </Group>
+        )}
       </Stack>
 
       <CreateTicketModal

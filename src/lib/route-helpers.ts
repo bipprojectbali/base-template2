@@ -1,6 +1,10 @@
 import { type AuthUser } from './auth-middleware'
 import { prisma } from './db'
 
+// Soft delete helpers — use in all Ticket queries
+export const notDeleted = { deletedAt: null } as const
+export function softDelete() { return { deletedAt: new Date() } }
+
 export function getIp(request: Request): string {
   return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip') ?? 'unknown'
 }

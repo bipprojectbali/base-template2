@@ -2,7 +2,7 @@ import { Elysia } from 'elysia'
 import { betterAuthPlugin } from '../lib/auth-middleware'
 import { appLog } from '../lib/applog'
 import { prisma } from '../lib/db'
-import { audit, getIp, guardQcOrAdmin } from '../lib/route-helpers'
+import { audit, getIp, guardQcOrAdmin, notDeleted, softDelete } from '../lib/route-helpers'
 
 function getAllowedStatusTransitions(current: string, role: 'QC' | 'ADMIN' | 'SUPER_ADMIN'): string[] {
   const isQc = role === 'QC' || role === 'SUPER_ADMIN'
@@ -26,7 +26,10 @@ export const ticketsRouter = new Elysia()
   .use(betterAuthPlugin)
   .get('/api/tickets', async ({ query, authUser }) => {
     const guard = guardQcOrAdmin(authUser); if (guard) return guard
-    const where: Record<string, unknown> = {}
+    const limit = Math.min(Number(query.limit) || 50, 200)
+    const cursor = query.cursor as string | undefined
+
+    const where: Record<string, unknown> = { ...notDeleted }
     if (query.status) where.status = String(query.status)
     if (query.priority) where.priority = String(query.priority)
     if (query.assigneeId) where.assigneeId = String(query.assigneeId)
@@ -41,15 +44,21 @@ export const ticketsRouter = new Elysia()
         _count: { select: { comments: true, evidence: true } },
       },
       orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
-      take: Math.min(Number(query.limit) || 100, 500),
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     })
-    return { tickets }
+
+    const hasMore = tickets.length > limit
+    return {
+      tickets: hasMore ? tickets.slice(0, limit) : tickets,
+      nextCursor: hasMore ? tickets[limit - 1]?.id : undefined,
+    }
   })
 
   .get('/api/tickets/:id', async ({ params, set, authUser }) => {
     const guard = guardQcOrAdmin(authUser); if (guard) return guard
-    const ticket = await prisma.ticket.findUnique({
-      where: { id: params.id },
+    const ticket = await prisma.ticket.findFirst({
+      where: { id: params.id, ...notDeleted },
       include: {
         reporter: { select: { id: true, name: true, email: true, role: true } },
         assignee: { select: { id: true, name: true, email: true, role: true } },
@@ -87,7 +96,7 @@ export const ticketsRouter = new Elysia()
 
   .patch('/api/tickets/:id', async ({ request, params, set, authUser }) => {
     const guard = guardQcOrAdmin(authUser); if (guard) return guard
-    const current = await prisma.ticket.findUnique({ where: { id: params.id } })
+    const current = await prisma.ticket.findFirst({ where: { id: params.id, ...notDeleted } })
     if (!current) { set.status = 404; return { error: 'Ticket not found' } }
 
     const body = (await request.json()) as {
@@ -119,7 +128,7 @@ export const ticketsRouter = new Elysia()
 
   .post('/api/tickets/:id/comments', async ({ request, params, set, authUser }) => {
     const guard = guardQcOrAdmin(authUser); if (guard) return guard
-    const ticket = await prisma.ticket.findUnique({ where: { id: params.id }, select: { id: true } })
+    const ticket = await prisma.ticket.findFirst({ where: { id: params.id, ...notDeleted }, select: { id: true } })
     if (!ticket) { set.status = 404; return { error: 'Ticket not found' } }
 
     const { body } = (await request.json()) as { body?: string }
@@ -139,7 +148,7 @@ export const ticketsRouter = new Elysia()
 
   .post('/api/tickets/:id/evidence', async ({ request, params, set, authUser }) => {
     const guard = guardQcOrAdmin(authUser); if (guard) return guard
-    const ticket = await prisma.ticket.findUnique({ where: { id: params.id }, select: { id: true } })
+    const ticket = await prisma.ticket.findFirst({ where: { id: params.id, ...notDeleted }, select: { id: true } })
     if (!ticket) { set.status = 404; return { error: 'Ticket not found' } }
 
     const body = (await request.json()) as { kind?: string; url?: string; note?: string }
