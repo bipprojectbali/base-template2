@@ -10,6 +10,7 @@ function required(key: string): string {
 
 export const env = {
   PORT: parseInt(optional('PORT', '3000'), 10),
+  HMR_PORT: parseInt(optional('HMR_PORT', '24678'), 10),
   NODE_ENV: optional('NODE_ENV', 'development'),
   REACT_EDITOR: optional('REACT_EDITOR', 'code'),
   DATABASE_URL: required('DATABASE_URL'),

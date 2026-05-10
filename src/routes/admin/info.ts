@@ -310,6 +310,7 @@ export const adminInfoRouter = new Elysia({ tags: ['Admin — Info'] })
       { name: 'BETTER_AUTH_URL', envKey: 'BETTER_AUTH_URL', required: false, default: 'http://localhost:3000', category: 'auth', description: 'Better Auth base URL (production URL)' },
       { name: 'SUPER_ADMIN_EMAIL', envKey: 'SUPER_ADMIN_EMAIL', required: false, default: '(empty)', category: 'auth', description: 'Comma-separated emails to auto-promote to SUPER_ADMIN' },
       { name: 'PORT', envKey: 'PORT', required: false, default: '3000', category: 'app', description: 'Server port' },
+      { name: 'HMR_PORT', envKey: 'HMR_PORT', required: false, default: '24678', category: 'app', description: 'Vite HMR WebSocket port (dev only) — set per instance to avoid collision' },
       { name: 'NODE_ENV', envKey: 'NODE_ENV', required: false, default: 'development', category: 'app', description: 'Environment mode' },
       { name: 'REACT_EDITOR', envKey: 'REACT_EDITOR', required: false, default: 'code', category: 'app', description: 'Editor for click-to-source' },
       { name: 'AUDIT_LOG_RETENTION_DAYS', envKey: 'AUDIT_LOG_RETENTION_DAYS', required: false, default: '90', category: 'app', description: 'Days to keep audit logs' },

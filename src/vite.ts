@@ -186,15 +186,13 @@ export async function createVite() {
     server: {
       middlewareMode: true,
       allowedHosts: true,
-      // HMR WebSocket runs on a dedicated port (PORT+1) separate from the Bun
-      // app server. In middlewareMode Bun cannot share its server with Vite's
-      // WebSocket, so Vite binds its own WS server. Using PORT+1 means:
-      // - No conflict with the app port
-      // - Each cloned instance gets a unique HMR port (3112, 3113, etc.)
-      // - bun --watch restarts don't race on port 24678 (Vite default)
+      // HMR WebSocket runs on a dedicated port (HMR_PORT env, default 24678).
+      // In middlewareMode Bun cannot share its server with Vite's WebSocket,
+      // so Vite binds its own standalone WS server on this port.
+      // Set HMR_PORT in .env to avoid collision with other apps.
       hmr: {
-        port: parseInt(process.env.PORT ?? '3000', 10) + 1,
-        clientPort: parseInt(process.env.PORT ?? '3000', 10) + 1,
+        port: parseInt(process.env.HMR_PORT ?? '24678', 10),
+        clientPort: parseInt(process.env.HMR_PORT ?? '24678', 10),
       },
     },
     appType: 'custom',
