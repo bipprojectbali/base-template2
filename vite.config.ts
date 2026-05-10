@@ -16,6 +16,16 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       input: path.resolve(__dirname, 'index.html'),
+      output: {
+        manualChunks: (id) => {
+          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) return 'react'
+          if (id.includes('node_modules/@mantine')) return 'mantine'
+          if (id.includes('node_modules/@tanstack')) return 'tanstack'
+          if (id.includes('node_modules/react-icons')) return 'icons'
+          if (id.includes('node_modules/@xyflow') || id.includes('node_modules/elkjs')) return 'xyflow'
+          if (id.includes('node_modules/')) return 'vendor'
+        },
+      },
     },
   },
 })

@@ -70,6 +70,7 @@ import {
 } from 'react-icons/tb'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { TicketsPanel } from '@/frontend/components/TicketsPanel'
+import { apiFetch } from '@/frontend/lib/apiFetch'
 import { type Role, useLogout, useSession } from '@/frontend/hooks/useAuth'
 import { authClient } from '@/lib/auth-client'
 import { rootRoute } from './__root'
@@ -344,7 +345,7 @@ function OverviewPanel() {
   const { data } = useQuery({
     queryKey: ['admin', 'users'],
     queryFn: () =>
-      fetch('/api/admin/users', { credentials: 'include' }).then((r) => r.json()) as Promise<{ users: AdminUser[] }>,
+      apiFetch<{ users: AdminUser[] }>('/api/admin/users'),
   })
   const { onlineUserIds } = usePresence()
 
@@ -395,7 +396,7 @@ function UsersPanel() {
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'users'],
     queryFn: () =>
-      fetch('/api/admin/users', { credentials: 'include' }).then((r) => r.json()) as Promise<{ users: AdminUser[] }>,
+      apiFetch<{ users: AdminUser[] }>('/api/admin/users'),
   })
 
   const { data: sessionData } = useSession()
@@ -404,23 +405,21 @@ function UsersPanel() {
 
   const changeRole = useMutation({
     mutationFn: ({ id, role }: { id: string; role: string }) =>
-      fetch(`/api/admin/users/${id}/role`, {
+      apiFetch(`/api/admin/users/${id}/role`, {
         method: 'PUT',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role }),
-      }).then((r) => r.json()),
+      }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
   })
 
   const toggleBlock = useMutation({
     mutationFn: ({ id, blocked }: { id: string; blocked: boolean }) =>
-      fetch(`/api/admin/users/${id}/block`, {
+      apiFetch(`/api/admin/users/${id}/block`, {
         method: 'PUT',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ blocked }),
-      }).then((r) => r.json()),
+      }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
   })
 
@@ -615,15 +614,15 @@ function AppLogsPanel() {
     queryFn: () => {
       const params = new URLSearchParams({ limit: '200' })
       if (levelFilter !== 'all') params.set('level', levelFilter)
-      return fetch(`/api/admin/logs/app?${params}`, { credentials: 'include' }).then((r) => r.json()) as Promise<{
+      return apiFetch<{
         logs: AppLogEntry[]
-      }>
+      }>(`/api/admin/logs/app?${params}`)
     },
     refetchInterval: 5000,
   })
 
   const clearLogs = useMutation({
-    mutationFn: () => fetch('/api/admin/logs/app', { method: 'DELETE', credentials: 'include' }).then((r) => r.json()),
+    mutationFn: () => apiFetch('/api/admin/logs/app', { method: 'DELETE' }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'logs', 'app'] }),
   })
 
@@ -783,7 +782,7 @@ function UserLogsPanel() {
   const { data: usersData } = useQuery({
     queryKey: ['admin', 'users'],
     queryFn: () =>
-      fetch('/api/admin/users', { credentials: 'include' }).then((r) => r.json()) as Promise<{ users: AdminUser[] }>,
+      apiFetch<{ users: AdminUser[] }>('/api/admin/users'),
   })
 
   const { data, isLoading, refetch, isFetching } = useQuery({
@@ -792,15 +791,15 @@ function UserLogsPanel() {
       const params = new URLSearchParams({ limit: '200' })
       if (actionFilter) params.set('action', actionFilter)
       if (userFilter) params.set('userId', userFilter)
-      return fetch(`/api/admin/logs/audit?${params}`, { credentials: 'include' }).then((r) => r.json()) as Promise<{
+      return apiFetch<{
         logs: AuditLogEntry[]
-      }>
+      }>(`/api/admin/logs/audit?${params}`)
     },
   })
 
   const clearLogs = useMutation({
     mutationFn: () =>
-      fetch('/api/admin/logs/audit', { method: 'DELETE', credentials: 'include' }).then((r) => r.json()),
+      apiFetch('/api/admin/logs/audit', { method: 'DELETE' }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'logs', 'audit'] }),
   })
 
@@ -1153,7 +1152,7 @@ function DatabasePanelInner() {
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ['admin', 'schema'],
     queryFn: () =>
-      fetch('/api/admin/schema', { credentials: 'include' }).then((r) => r.json()) as Promise<{ schema: ParsedSchema }>,
+      apiFetch<{ schema: ParsedSchema }>('/api/admin/schema'),
   })
 
   const schema = data?.schema
@@ -1859,7 +1858,7 @@ function ApiRoutesFlowInner() {
   const qc = useQueryClient()
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ['admin', 'routes'],
-    queryFn: () => fetch('/api/admin/routes', { credentials: 'include' }).then((r) => r.json()) as Promise<RoutesData>,
+    queryFn: () => apiFetch<RoutesData>('/api/admin/routes'),
   })
   const flow = useFlowAutoSave(storageKey('api-routes'))
 
@@ -2010,7 +2009,7 @@ function FileStructureFlowInner() {
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ['admin', 'project-structure'],
     queryFn: () =>
-      fetch('/api/admin/project-structure', { credentials: 'include' }).then((r) => r.json()) as Promise<ProjectData>,
+      apiFetch<ProjectData>('/api/admin/project-structure'),
   })
   const [filter, setFilter] = useState('all')
   const flow = useFlowAutoSave(storageKey('file-structure'))
@@ -2452,7 +2451,7 @@ function EnvMapFlowInner() {
   const qc = useQueryClient()
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ['admin', 'env-map'],
-    queryFn: () => fetch('/api/admin/env-map', { credentials: 'include' }).then((r) => r.json()) as Promise<EnvMapData>,
+    queryFn: () => apiFetch<EnvMapData>('/api/admin/env-map'),
   })
   const flow = useFlowAutoSave(storageKey('env-map'))
 
@@ -2686,7 +2685,7 @@ function TestCoverageFlowInner() {
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ['admin', 'test-coverage'],
     queryFn: () =>
-      fetch('/api/admin/test-coverage', { credentials: 'include' }).then((r) => r.json()) as Promise<TestCoverageData>,
+      apiFetch<TestCoverageData>('/api/admin/test-coverage'),
   })
   const [filter, setFilter] = useState('all')
   const flow = useFlowAutoSave(storageKey('test-coverage'))
@@ -2863,7 +2862,7 @@ function DependenciesFlowInner() {
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ['admin', 'dependencies'],
     queryFn: () =>
-      fetch('/api/admin/dependencies', { credentials: 'include' }).then((r) => r.json()) as Promise<DepData>,
+      apiFetch<DepData>('/api/admin/dependencies'),
   })
   const [filter, setFilter] = useState('all')
   const flow = useFlowAutoSave(storageKey('dependencies'))
@@ -3068,7 +3067,7 @@ function MigrationsFlowInner() {
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ['admin', 'migrations'],
     queryFn: () =>
-      fetch('/api/admin/migrations', { credentials: 'include' }).then((r) => r.json()) as Promise<MigrationData>,
+      apiFetch<MigrationData>('/api/admin/migrations'),
   })
   const flow = useFlowAutoSave(storageKey('migrations'))
 
@@ -3288,7 +3287,7 @@ function SessionsFlowInner() {
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ['admin', 'sessions'],
     queryFn: () =>
-      fetch('/api/admin/sessions', { credentials: 'include' }).then((r) => r.json()) as Promise<SessionData>,
+      apiFetch<SessionData>('/api/admin/sessions'),
     refetchInterval: 10000,
   })
   const flow = useFlowAutoSave(storageKey('sessions'))
