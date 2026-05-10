@@ -60,6 +60,9 @@ export function createApp() {
             },
           },
         },
+        scalarConfig: {
+          spec: { url: '/api/docs/json' },
+        },
         swaggerOptions: {
           persistAuthorization: true,
           displayRequestDuration: true,
