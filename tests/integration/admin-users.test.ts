@@ -102,7 +102,8 @@ describe('PUT /api/admin/users/:id/role', () => {
       headers: { cookie: superAdminCookie, 'Content-Type': 'application/json' },
       body: JSON.stringify({ role: 'SUPER_ADMIN' }),
     }))
-    expect(res.status).toBe(400)
+    // 422 = Elysia body schema validation (SUPER_ADMIN not in union), 400 = app logic
+    expect([400, 422]).toContain(res.status)
   })
 
   test('cannot change own role', async () => {

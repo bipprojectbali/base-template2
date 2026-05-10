@@ -1,7 +1,8 @@
 import { cors } from '@elysiajs/cors'
 import { html } from '@elysiajs/html'
+import { swagger } from '@elysiajs/swagger'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
-import { Elysia } from 'elysia'
+import { Elysia, t } from 'elysia'
 import { createMcpServer, type McpScope } from '../scripts/mcp/server'
 import { appLog } from './lib/applog'
 import { auth } from './lib/auth'
@@ -29,6 +30,46 @@ export function createApp() {
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       }))
       .use(html())
+
+      // ─── Swagger / API Docs ────────────────────────────────
+      .use(swagger({
+        path: '/api/docs',
+        documentation: {
+          info: {
+            title: 'Bun Base Template API',
+            version: pkg.version,
+            description: `Full-stack Bun + Elysia + Better Auth API.\n\n**Auth:** All protected endpoints require a valid session cookie (\`better-auth.session_token\`).\n\n**Roles:** \`USER\` → \`QC\` → \`ADMIN\` → \`SUPER_ADMIN\``,
+            contact: { name: 'API Docs', url: '/api/docs' },
+          },
+          tags: [
+            { name: 'Utility', description: 'Health check, version, and example routes' },
+            { name: 'Auth', description: 'Better Auth — sign in, sign out, session, Google OAuth' },
+            { name: 'Tickets', description: 'Ticket management — requires QC, ADMIN, or SUPER_ADMIN' },
+            { name: 'Admin — Users', description: 'User management — requires SUPER_ADMIN' },
+            { name: 'Admin — Logs', description: 'App and audit logs — requires SUPER_ADMIN' },
+            { name: 'Admin — Info', description: 'Project introspection (schema, routes, env, coverage, deps, migrations, sessions) — requires SUPER_ADMIN' },
+          ],
+          components: {
+            securitySchemes: {
+              cookieAuth: {
+                type: 'apiKey',
+                in: 'cookie',
+                name: 'better-auth.session_token',
+                description: 'Session cookie set by Better Auth on sign-in',
+              },
+            },
+          },
+        },
+        swaggerOptions: {
+          persistAuthorization: true,
+          displayRequestDuration: true,
+          defaultModelsExpandDepth: 2,
+          defaultModelExpandDepth: 2,
+          docExpansion: 'list',
+          filter: true,
+          showExtensions: true,
+        },
+      }))
 
       // ─── Better Auth (handles /api/auth/* routes) ─────────
       .use(betterAuthPlugin)
@@ -80,10 +121,17 @@ export function createApp() {
       })
 
       // ─── Health ────────────────────────────────────────────
-      .get('/health', () => ({ status: 'ok' }))
+      .get('/health', () => ({ status: 'ok' }), {
+        detail: {
+          tags: ['Utility'],
+          summary: 'Health check',
+          description: 'Returns `{ status: "ok" }` when the server is running.',
+          responses: { 200: { description: 'Server is healthy' } },
+        }
+      })
 
       // ─── Dev Auth (development only) ──────────────────────
-      .get('/api/dev-auth/login-as/:email', async ({ request, params, set, query }) => {
+      .get('/api/dev-auth/login-as/:email', async ({ request, params, set, query }: { request: Request; params: { email: string }; set: any; query: Record<string, string> }) => {
         if (env.NODE_ENV !== 'development') {
           set.status = 404
           return { error: 'Not found' }
@@ -115,6 +163,19 @@ export function createApp() {
         }
         set.headers['set-cookie'] = cookieHeader
         return { user: { id: user.id, name: user.name, email: user.email, role: user.role } }
+      }, {
+        detail: {
+          tags: ['Auth'],
+          summary: 'Dev login (development only)',
+          description: '**Development only.** Returns 404 in production. Creates a session for any user by email without a password check. Useful for testing different roles.',
+          responses: {
+            200: { description: 'Session created and cookie set' },
+            302: { description: 'Redirect to ?redirect= param with cookie set' },
+            404: { description: 'User not found or production environment' },
+          },
+        },
+        params: t.Object({ email: t.String({ description: 'Email of the user to log in as' }) }),
+        query: t.Object({ redirect: t.Optional(t.String({ description: 'Redirect path after login' })) }),
       })
 
       // ─── WebSocket Presence ────────────────────────────────
@@ -172,9 +233,36 @@ export function createApp() {
       })
 
       // ─── Utility ───────────────────────────────────────────
-      .get('/api/version', () => ({ name: pkg.name, version: pkg.version }))
-      .get('/api/hello', () => ({ message: 'Hello, world!', method: 'GET' }))
-      .put('/api/hello', () => ({ message: 'Hello, world!', method: 'PUT' }))
-      .get('/api/hello/:name', ({ params }) => ({ message: `Hello, ${params.name}!` }))
+      .get('/api/version', () => ({ name: pkg.name, version: pkg.version }), {
+        detail: {
+          tags: ['Utility'],
+          summary: 'App version',
+          description: 'Returns the application name and version from package.json.',
+          responses: { 200: { description: 'Name and version' } },
+        }
+      })
+      .get('/api/hello', () => ({ message: 'Hello, world!', method: 'GET' }), {
+        detail: {
+          tags: ['Utility'],
+          summary: 'Hello world (GET)',
+          responses: { 200: { description: 'Hello response' } },
+        }
+      })
+      .put('/api/hello', () => ({ message: 'Hello, world!', method: 'PUT' }), {
+        detail: {
+          tags: ['Utility'],
+          summary: 'Hello world (PUT)',
+          responses: { 200: { description: 'Hello response' } },
+        }
+      })
+      .get('/api/hello/:name', ({ params }) => ({ message: `Hello, ${params.name}!` }), {
+        detail: {
+          tags: ['Utility'],
+          summary: 'Hello with name',
+          description: 'Returns a personalized greeting.',
+          responses: { 200: { description: 'Personalized hello' } },
+        },
+        params: t.Object({ name: t.String({ description: 'Name to greet' }) })
+      })
   )
 }
