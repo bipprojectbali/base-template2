@@ -74,6 +74,7 @@ tests/
 
 ## Detail Docs
 
+See @docs/AI_CONTRACT.md
 See @docs/AUTH.md
 See @docs/API.md
 See @docs/FRONTEND.md
