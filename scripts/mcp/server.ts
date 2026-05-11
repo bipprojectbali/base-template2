@@ -34,7 +34,7 @@ const ADMIN_MODULES: ToolModule[] = [
 
 export function createMcpServer(scope: McpScope = 'admin'): McpServer {
   const server = new McpServer({
-    name: 'app-mcp',
+    name: 'debug-dev',
     version: '0.2.0',
   })
 
