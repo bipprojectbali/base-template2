@@ -76,11 +76,7 @@ function LoginPage() {
       }}
     >
       {/* Header with theme toggle */}
-      <Box
-        px={{ base: 'md', sm: 'xl' }}
-        py="sm"
-        style={{ display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}
-      >
+      <Box px={{ base: 'md', sm: 'xl' }} py="sm" style={{ display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
         <ThemeToggle />
       </Box>
 
@@ -95,14 +91,7 @@ function LoginPage() {
           paddingBottom: 'env(safe-area-inset-bottom, 16px)',
         }}
       >
-        <Paper
-          shadow="md"
-          p={{ base: 'lg', sm: 'xl' }}
-          radius="md"
-          w={{ base: '100%', xs: 400 }}
-          maw={400}
-          withBorder
-        >
+        <Paper shadow="md" p={{ base: 'lg', sm: 'xl' }} radius="md" w={{ base: '100%', xs: 400 }} maw={400} withBorder>
           <form onSubmit={handleSubmit}>
             <Stack gap="md">
               <Title order={2} ta="center" fz={{ base: 'xl', sm: '2xl' }}>
@@ -143,13 +132,7 @@ function LoginPage() {
                 required
               />
 
-              <Button
-                type="submit"
-                fullWidth
-                size="md"
-                leftSection={<TbLogin size={18} />}
-                loading={isLoading}
-              >
+              <Button type="submit" fullWidth size="md" leftSection={<TbLogin size={18} />} loading={isLoading}>
                 Sign in
               </Button>
 

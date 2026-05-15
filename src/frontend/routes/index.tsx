@@ -15,11 +15,7 @@ function HomePage() {
   return (
     <Box style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       {/* Header bar — always visible, full width */}
-      <Box
-        px={{ base: 'md', sm: 'xl' }}
-        py="sm"
-        style={{ display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}
-      >
+      <Box px={{ base: 'md', sm: 'xl' }} py="sm" style={{ display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
         <ThemeToggle />
       </Box>
 
@@ -31,8 +27,16 @@ function HomePage() {
       >
         <Stack align="center" gap="md" w="100%">
           <Group gap="md">
-            <SiBun size={48} color="#fbf0df" style={{ width: 'clamp(40px, 10vw, 64px)', height: 'clamp(40px, 10vw, 64px)' }} />
-            <TbBrandReact size={48} color="#61dafb" style={{ width: 'clamp(40px, 10vw, 64px)', height: 'clamp(40px, 10vw, 64px)' }} />
+            <SiBun
+              size={48}
+              color="#fbf0df"
+              style={{ width: 'clamp(40px, 10vw, 64px)', height: 'clamp(40px, 10vw, 64px)' }}
+            />
+            <TbBrandReact
+              size={48}
+              color="#61dafb"
+              style={{ width: 'clamp(40px, 10vw, 64px)', height: 'clamp(40px, 10vw, 64px)' }}
+            />
           </Group>
 
           <Title order={1} ta="center" fz={{ base: 'xl', sm: '2xl', md: '3xl' }}>
@@ -43,13 +47,7 @@ function HomePage() {
             Full-stack starter template with Mantine UI, TanStack Router, and session-based auth.
           </Text>
 
-          <Group
-            gap="sm"
-            wrap="wrap"
-            justify="center"
-            w="100%"
-            maw={{ base: '100%', xs: 320 }}
-          >
+          <Group gap="sm" wrap="wrap" justify="center" w="100%" maw={{ base: '100%', xs: 320 }}>
             <Button
               component={Link}
               to="/login"

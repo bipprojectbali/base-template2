@@ -68,20 +68,20 @@ import {
   TbUsers,
   TbWifi,
 } from 'react-icons/tb'
+import { AppLogsPanel } from '@/frontend/components/dev/AppLogsPanel'
+import { DatabasePanel } from '@/frontend/components/dev/DatabasePanel'
+import { OverviewPanel } from '@/frontend/components/dev/OverviewPanel'
+import { PlaceholderPanel } from '@/frontend/components/dev/PlaceholderPanel'
+import { ProjectPanel } from '@/frontend/components/dev/ProjectPanel'
+import { UserLogsPanel } from '@/frontend/components/dev/UserLogsPanel'
+import { UsersPanel } from '@/frontend/components/dev/UsersPanel'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { TicketsPanel } from '@/frontend/components/TicketsPanel'
-import { OverviewPanel } from '@/frontend/components/dev/OverviewPanel'
-import { UsersPanel } from '@/frontend/components/dev/UsersPanel'
-import { AppLogsPanel } from '@/frontend/components/dev/AppLogsPanel'
-import { UserLogsPanel } from '@/frontend/components/dev/UserLogsPanel'
-import { DatabasePanel } from '@/frontend/components/dev/DatabasePanel'
-import { ProjectPanel } from '@/frontend/components/dev/ProjectPanel'
-import { PlaceholderPanel } from '@/frontend/components/dev/PlaceholderPanel'
-import { apiFetch } from '@/frontend/lib/apiFetch'
 import { type Role, useLogout, useSession } from '@/frontend/hooks/useAuth'
+import { usePresence } from '@/frontend/hooks/usePresence'
+import { apiFetch } from '@/frontend/lib/apiFetch'
 import { authClient } from '@/lib/auth-client'
 import { rootRoute } from './__root'
-import { usePresence } from '@/frontend/hooks/usePresence'
 
 const validTabs = ['overview', 'users', 'tickets', 'app-logs', 'user-logs', 'database', 'project', 'settings'] as const
 
@@ -247,11 +247,7 @@ function DevPage() {
             ),
           )}
 
-          {collapsed ? (
-            <Divider my={6} />
-          ) : (
-            <Divider my={6} label="Apps" labelPosition="left" />
-          )}
+          {collapsed ? <Divider my={6} /> : <Divider my={6} label="Apps" labelPosition="left" />}
 
           {collapsed ? (
             <Tooltip label="Dashboard" position="right">
@@ -338,4 +334,3 @@ function DevPage() {
     </AppShell>
   )
 }
-

@@ -1,8 +1,8 @@
 import { Card, Container, Group, SimpleGrid, Stack, Text, ThemeIcon, Title } from '@mantine/core'
 import { useQuery } from '@tanstack/react-query'
 import { TbLock, TbShieldCheck, TbUsers, TbWifi } from 'react-icons/tb'
-import { apiFetch } from '@/frontend/lib/apiFetch'
 import { usePresence } from '@/frontend/hooks/usePresence'
+import { apiFetch } from '@/frontend/lib/apiFetch'
 import type { AdminUser } from './shared'
 
 const overviewStats = [
@@ -35,7 +35,9 @@ export function OverviewPanel() {
           {overviewStats.map((stat) => (
             <Card key={stat.title} withBorder padding="lg" radius="md">
               <Group justify="space-between" mb="xs">
-                <Text size="sm" c="dimmed" fw={500}>{stat.title}</Text>
+                <Text size="sm" c="dimmed" fw={500}>
+                  {stat.title}
+                </Text>
                 <ThemeIcon variant="light" color={stat.color} size="sm">
                   <stat.icon size={14} />
                 </ThemeIcon>

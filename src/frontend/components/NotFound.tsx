@@ -6,8 +6,13 @@ export function NotFound() {
   return (
     <Center mih="100vh" px="md">
       <Stack align="center" gap="md">
-        <TbError404 style={{ width: 'clamp(48px, 15vw, 80px)', height: 'clamp(48px, 15vw, 80px)' }} color="var(--mantine-color-dimmed)" />
-        <Title order={1} fz={{ base: 'xl', sm: '2xl', md: '3xl' }}>404</Title>
+        <TbError404
+          style={{ width: 'clamp(48px, 15vw, 80px)', height: 'clamp(48px, 15vw, 80px)' }}
+          color="var(--mantine-color-dimmed)"
+        />
+        <Title order={1} fz={{ base: 'xl', sm: '2xl', md: '3xl' }}>
+          404
+        </Title>
         <Text c="dimmed" size="lg" ta="center">
           Halaman tidak ditemukan
         </Text>

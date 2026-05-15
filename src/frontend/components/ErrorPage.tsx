@@ -7,8 +7,13 @@ export function ErrorPage({ error }: { error: unknown }) {
   return (
     <Center mih="100vh" px="md">
       <Stack align="center" gap="md" maw={{ base: '100%', sm: 480 }}>
-        <TbAlertTriangle style={{ width: 'clamp(48px, 12vw, 80px)', height: 'clamp(48px, 12vw, 80px)' }} color="var(--mantine-color-red-6)" />
-        <Title order={1} fz={{ base: 'xl', sm: '2xl', md: '3xl' }}>500</Title>
+        <TbAlertTriangle
+          style={{ width: 'clamp(48px, 12vw, 80px)', height: 'clamp(48px, 12vw, 80px)' }}
+          color="var(--mantine-color-red-6)"
+        />
+        <Title order={1} fz={{ base: 'xl', sm: '2xl', md: '3xl' }}>
+          500
+        </Title>
         <Text c="dimmed" size="lg" ta="center">
           Terjadi kesalahan pada server
         </Text>

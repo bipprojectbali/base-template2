@@ -45,10 +45,11 @@ function ProfilePage() {
   return (
     <Container size="sm" px={{ base: 'md', sm: 'lg' }} py={{ base: 'md', sm: 'xl' }}>
       <Stack gap="md">
-
         {/* Header row — stacks on very small screens */}
         <Group justify="space-between" align="center" wrap="wrap" gap="sm">
-          <Title order={2} fz={{ base: 'xl', sm: '2xl' }}>Profile</Title>
+          <Title order={2} fz={{ base: 'xl', sm: '2xl' }}>
+            Profile
+          </Title>
           <Group gap="xs" wrap="wrap">
             <ThemeToggle size="sm" />
             {user?.role === 'SUPER_ADMIN' && (
@@ -89,8 +90,12 @@ function ProfilePage() {
               {user?.name?.charAt(0).toUpperCase()}
             </Avatar>
             <div style={{ textAlign: 'center' }}>
-              <Text fw={600} size="lg">{user?.name}</Text>
-              <Text c="dimmed" size="sm" style={{ wordBreak: 'break-all' }}>{user?.email}</Text>
+              <Text fw={600} size="lg">
+                {user?.name}
+              </Text>
+              <Text c="dimmed" size="sm" style={{ wordBreak: 'break-all' }}>
+                {user?.email}
+              </Text>
             </div>
             <Badge color={roleBadgeColor[user?.role ?? 'USER']} variant="light" size="lg">
               {user?.role}
@@ -103,7 +108,9 @@ function ProfilePage() {
           <Stack gap="sm">
             <Group gap="xs">
               <TbUser size={16} />
-              <Text fw={500} size="sm">Account Info</Text>
+              <Text fw={500} size="sm">
+                Account Info
+              </Text>
             </Group>
             <Divider />
             {[
@@ -112,8 +119,12 @@ function ProfilePage() {
               { label: 'Role', value: user?.role },
             ].map(({ label, value }) => (
               <Group key={label} justify="space-between" wrap="nowrap" gap="xs">
-                <Text size="sm" c="dimmed" style={{ flexShrink: 0 }}>{label}</Text>
-                <Text size="sm" ta="right" style={{ wordBreak: 'break-all' }}>{value}</Text>
+                <Text size="sm" c="dimmed" style={{ flexShrink: 0 }}>
+                  {label}
+                </Text>
+                <Text size="sm" ta="right" style={{ wordBreak: 'break-all' }}>
+                  {value}
+                </Text>
               </Group>
             ))}
           </Stack>

@@ -1,10 +1,6 @@
 import { redis } from './redis'
 
-export async function withCache<T>(
-  key: string,
-  ttlSeconds: number,
-  fetcher: () => Promise<T>,
-): Promise<T> {
+export async function withCache<T>(key: string, ttlSeconds: number, fetcher: () => Promise<T>): Promise<T> {
   try {
     const cached = await redis.get(key)
     if (cached) return JSON.parse(cached) as T

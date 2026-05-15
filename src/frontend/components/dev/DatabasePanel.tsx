@@ -1,30 +1,5 @@
-import {
-  ActionIcon,
-  AppShell,
-  Avatar,
-  Badge,
-  Box,
-  Burger,
-  Card,
-  Container,
-  Divider,
-  Group,
-  Menu,
-  NavLink,
-  Pagination,
-  SegmentedControl,
-  Select,
-  SimpleGrid,
-  Stack,
-  Table,
-  Text,
-  ThemeIcon,
-  Title,
-  Tooltip,
-} from '@mantine/core'
-import { useDisclosure, useMediaQuery } from '@mantine/hooks'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { ActionIcon, Badge, Container, Group, Stack, Text, Title, Tooltip } from '@mantine/core'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Background,
   Controls,
@@ -33,53 +8,20 @@ import {
   MarkerType,
   type Node,
   type NodeChange,
-  type Viewport,
   Position,
   ReactFlow,
   ReactFlowProvider,
   useEdgesState,
   useNodesState,
   useReactFlow,
+  type Viewport,
 } from '@xyflow/react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import '@xyflow/react/dist/style.css'
-import { modals } from '@mantine/modals'
-import {
-  TbBug,
-  TbChevronRight,
-  TbCircleFilled,
-  TbCode,
-  TbDatabase,
-  TbDots,
-  TbFileText,
-  TbLayoutDashboard,
-  TbLayoutSidebarLeftCollapse,
-  TbLayoutSidebarLeftExpand,
-  TbLock,
-  TbLockOpen,
-  TbLogout,
-  TbRefresh,
-  TbServer,
-  TbSettings,
-  TbShieldCheck,
-  TbShieldOff,
-  TbSitemap,
-  TbTrash,
-  TbUser,
-  TbUserSearch,
-  TbUsers,
-  TbWifi,
-} from 'react-icons/tb'
-import { ThemeToggle } from '@/frontend/components/ThemeToggle'
-import { TicketsPanel } from '@/frontend/components/TicketsPanel'
+import { TbRefresh } from 'react-icons/tb'
 import { apiFetch } from '@/frontend/lib/apiFetch'
-import { type Role, useLogout, useSession } from '@/frontend/hooks/useAuth'
-import { authClient } from '@/lib/auth-client'
-import { rootRoute } from '@/frontend/routes/__root'
-import { usePresence } from '@/frontend/hooks/usePresence'
-
-import { type ParsedSchema, type SchemaField } from './shared'
-import { LayoutSelector, getLayoutedElements } from './layout'
+import { getLayoutedElements, LayoutSelector } from './layout'
+import type { ParsedSchema, SchemaField } from './shared'
 
 // Custom node for model tables
 function ModelNode({ data }: { data: { label: string; tableName: string; fields: SchemaField[] } }) {
@@ -236,8 +178,7 @@ function DatabasePanelInner() {
   const qc = useQueryClient()
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ['admin', 'schema'],
-    queryFn: () =>
-      apiFetch<{ schema: ParsedSchema }>('/api/admin/schema'),
+    queryFn: () => apiFetch<{ schema: ParsedSchema }>('/api/admin/schema'),
   })
 
   const schema = data?.schema
@@ -416,6 +357,5 @@ function DatabasePanelInner() {
     </Stack>
   )
 }
-
 
 export { DatabasePanel }

@@ -15,7 +15,9 @@ function PlaceholderPanel({
         <ThemeIcon size={56} variant="light" color="gray" radius="xl">
           <Icon size={28} />
         </ThemeIcon>
-        <Title order={3} fz={{ base: 'md', sm: 'lg' }}>{title}</Title>
+        <Title order={3} fz={{ base: 'md', sm: 'lg' }}>
+          {title}
+        </Title>
         <Text c="dimmed" ta="center" maw={{ base: '100%', sm: 350, md: 400 }} fz={{ base: 'sm', sm: 'md' }}>
           {desc}
         </Text>

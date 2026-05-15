@@ -163,11 +163,7 @@ export async function createVite() {
         '@': path.resolve(process.cwd(), './src'),
       },
     },
-    plugins: [
-      inspectorPlugin(),
-      react(),
-      dedupeRefreshPlugin(),
-    ],
+    plugins: [inspectorPlugin(), react(), dedupeRefreshPlugin()],
     // Suppress the spurious "WebSocket server error: Port undefined is already
     // in use" that Bun emits. Bun doesn't set e.port on EADDRINUSE so Vite
     // prints "Port undefined". HMR is actually working — this is a Bun bug.

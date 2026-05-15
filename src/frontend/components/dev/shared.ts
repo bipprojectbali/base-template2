@@ -75,7 +75,12 @@ export interface RouteInfo {
 
 export interface RoutesData {
   routes: RouteInfo[]
-  summary: { total: number; byMethod: Record<string, number>; byAuth: Record<string, number>; byCategory: Record<string, number> }
+  summary: {
+    total: number
+    byMethod: Record<string, number>
+    byAuth: Record<string, number>
+    byCategory: Record<string, number>
+  }
 }
 
 export interface FileInfo {
@@ -89,7 +94,13 @@ export interface FileInfo {
 export interface ProjectData {
   files: FileInfo[]
   directories: { path: string; category: string; fileCount: number }[]
-  summary: { totalFiles: number; totalLines: number; totalExports: number; totalImports: number; byCategory: Record<string, number> }
+  summary: {
+    totalFiles: number
+    totalLines: number
+    totalExports: number
+    totalImports: number
+    byCategory: Record<string, number>
+  }
 }
 
 export interface EnvVar {
@@ -110,7 +121,14 @@ export interface EnvMapData {
 export interface TestCoverageData {
   sourceFiles: { path: string; lines: number; exports: string[]; testedBy: string[]; coverage: string }[]
   testFiles: { path: string; lines: number; type: string; targets: string[] }[]
-  summary: { totalSource: number; totalTests: number; covered: number; partial: number; uncovered: number; coveragePercent: number }
+  summary: {
+    totalSource: number
+    totalTests: number
+    covered: number
+    partial: number
+    uncovered: number
+    coveragePercent: number
+  }
 }
 
 export interface DepData {
@@ -120,16 +138,34 @@ export interface DepData {
 
 export interface MigrationData {
   migrations: { name: string; folder: string; createdAt: string; changes: string[]; sql: string }[]
-  summary: { totalMigrations: number; firstMigration: string | null; lastMigration: string | null; totalChanges: number }
+  summary: {
+    totalMigrations: number
+    firstMigration: string | null
+    lastMigration: string | null
+    totalChanges: number
+  }
 }
 
 export interface SessionData {
   sessions: {
-    id: string; userId: string; userName: string; userEmail: string
-    userRole: string; userBlocked: boolean; isOnline: boolean
-    createdAt: string; expiresAt: string; isExpired: boolean
+    id: string
+    userId: string
+    userName: string
+    userEmail: string
+    userRole: string
+    userBlocked: boolean
+    isOnline: boolean
+    createdAt: string
+    expiresAt: string
+    isExpired: boolean
   }[]
-  summary: { totalSessions: number; activeSessions: number; expiredSessions: number; onlineUsers: number; byRole: Record<string, number> }
+  summary: {
+    totalSessions: number
+    activeSessions: number
+    expiredSessions: number
+    onlineUsers: number
+    byRole: Record<string, number>
+  }
 }
 
 export interface RequestEvent {
@@ -171,22 +207,39 @@ export const actionBadge: Record<string, { color: string; label: string }> = {
 }
 
 export const METHOD_COLORS: Record<string, string> = {
-  GET: 'blue', POST: 'green', PUT: 'orange', PATCH: 'yellow',
-  DELETE: 'red', WS: 'violet', ALL: 'gray', PAGE: 'teal',
+  GET: 'blue',
+  POST: 'green',
+  PUT: 'orange',
+  PATCH: 'yellow',
+  DELETE: 'red',
+  WS: 'violet',
+  ALL: 'gray',
+  PAGE: 'teal',
 }
 
 export const AUTH_COLORS: Record<string, string> = {
-  public: 'gray', authenticated: 'blue', superAdmin: 'red',
-  admin: 'violet', qcOrAdmin: 'cyan', secret: 'orange',
+  public: 'gray',
+  authenticated: 'blue',
+  superAdmin: 'red',
+  admin: 'violet',
+  qcOrAdmin: 'cyan',
+  secret: 'orange',
 }
 
 export const CATEGORY_COLORS: Record<string, string> = {
-  frontend: 'blue', auth: 'green', admin: 'violet', tickets: 'orange',
-  utility: 'gray', mcp: 'yellow', realtime: 'teal',
+  frontend: 'blue',
+  auth: 'green',
+  admin: 'violet',
+  tickets: 'orange',
+  utility: 'gray',
+  mcp: 'yellow',
+  realtime: 'teal',
 }
 
 export const COVERAGE_COLORS: Record<string, string> = {
-  covered: 'green', partial: 'yellow', uncovered: 'red',
+  covered: 'green',
+  partial: 'yellow',
+  uncovered: 'red',
 }
 
 export type LayoutType = 'horizontal' | 'vertical' | 'radial' | 'force'

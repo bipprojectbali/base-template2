@@ -17,11 +17,7 @@ function BlockedPage() {
   return (
     <Box style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       {/* Header with theme toggle */}
-      <Box
-        px={{ base: 'md', sm: 'xl' }}
-        py="sm"
-        style={{ display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}
-      >
+      <Box px={{ base: 'md', sm: 'xl' }} py="sm" style={{ display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
         <ThemeToggle />
       </Box>
 
@@ -36,14 +32,7 @@ function BlockedPage() {
           paddingBottom: 'env(safe-area-inset-bottom, 16px)',
         }}
       >
-        <Paper
-          shadow="md"
-          p={{ base: 'lg', sm: 'xl' }}
-          radius="md"
-          w={{ base: '100%', xs: 460 }}
-          maw={460}
-          withBorder
-        >
+        <Paper shadow="md" p={{ base: 'lg', sm: 'xl' }} radius="md" w={{ base: '100%', xs: 460 }} maw={460} withBorder>
           <Stack align="center" gap="md">
             <ThemeIcon color="red" size={56} radius="xl" variant="light">
               <TbShieldOff size={32} />
@@ -54,16 +43,16 @@ function BlockedPage() {
             </Title>
 
             <Text c="dimmed" ta="center" size="sm">
-              Akun Anda telah diblokir oleh administrator. Anda tidak dapat mengakses halaman manapun
-              di aplikasi ini sampai akun Anda dibuka kembali.
+              Akun Anda telah diblokir oleh administrator. Anda tidak dapat mengakses halaman manapun di aplikasi ini
+              sampai akun Anda dibuka kembali.
             </Text>
 
             <Alert icon={<TbAlertTriangle size={18} />} color="red" variant="light" w="100%">
               <Text size="sm">
                 <strong>Apa yang terjadi?</strong>
                 <br />
-                Administrator telah menonaktifkan akses Anda. Ini bisa terjadi karena pelanggaran
-                ketentuan penggunaan atau alasan keamanan lainnya.
+                Administrator telah menonaktifkan akses Anda. Ini bisa terjadi karena pelanggaran ketentuan penggunaan
+                atau alasan keamanan lainnya.
               </Text>
             </Alert>
 
@@ -71,8 +60,7 @@ function BlockedPage() {
               <Text size="sm">
                 <strong>Apa yang harus dilakukan?</strong>
                 <br />
-                Hubungi administrator untuk informasi lebih lanjut atau untuk mengajukan pembukaan
-                blokir akun Anda.
+                Hubungi administrator untuk informasi lebih lanjut atau untuk mengajukan pembukaan blokir akun Anda.
               </Text>
             </Alert>
 

@@ -81,3 +81,4 @@ See @docs/API.md
 See @docs/FRONTEND.md
 See @docs/DATABASE.md
 See @docs/MCP.md
+See @docs/FILE-HEALTH.md

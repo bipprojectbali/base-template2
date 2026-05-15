@@ -1,9 +1,9 @@
 import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
-import { createAuthMiddleware, APIError } from 'better-auth/api'
+import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { prisma } from './db'
-import { redis } from './redis'
 import { env } from './env'
+import { redis } from './redis'
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -84,10 +84,7 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (userData) => {
-          if (
-            env.SUPER_ADMIN_EMAILS.length > 0 &&
-            env.SUPER_ADMIN_EMAILS.includes((userData as any).email ?? '')
-          ) {
+          if (env.SUPER_ADMIN_EMAILS.length > 0 && env.SUPER_ADMIN_EMAILS.includes((userData as any).email ?? '')) {
             return { data: { ...userData, role: 'SUPER_ADMIN' } }
           }
         },
@@ -115,18 +112,13 @@ export const auth = betterAuth({
   },
 
   // ─── CSRF / Trusted Origins ────────────────────────
-  trustedOrigins: [
-    env.BETTER_AUTH_URL || `http://localhost:${env.PORT}`,
-    `http://localhost:${env.PORT}`,
-  ],
+  trustedOrigins: [env.BETTER_AUTH_URL || `http://localhost:${env.PORT}`, `http://localhost:${env.PORT}`],
 
   // ─── After Hook: handle blocked users + promote existing user ─
   hooks: {
     after: createAuthMiddleware(async (ctx) => {
       const isSignIn =
-        ctx.path === '/sign-in/email' ||
-        ctx.path === '/sign-in/social' ||
-        ctx.path?.startsWith?.('/callback/')
+        ctx.path === '/sign-in/email' || ctx.path === '/sign-in/social' || ctx.path?.startsWith?.('/callback/')
 
       if (!isSignIn) return
 
@@ -168,9 +160,7 @@ export const auth = betterAuth({
           try {
             const parsed = JSON.parse(cached)
             if (parsed?.user) parsed.user.role = 'SUPER_ADMIN'
-            const ttlSeconds = Math.floor(
-              (new Date(newSession.session.expiresAt).getTime() - Date.now()) / 1000,
-            )
+            const ttlSeconds = Math.floor((new Date(newSession.session.expiresAt).getTime() - Date.now()) / 1000)
             if (ttlSeconds > 0) {
               await redis.set(redisKey, JSON.stringify(parsed), 'EX', ttlSeconds)
             }

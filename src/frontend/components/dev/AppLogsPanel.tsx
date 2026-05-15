@@ -1,9 +1,22 @@
-import { ActionIcon, Badge, Card, Container, Group, Pagination, SegmentedControl, Stack, Table, Text, Title, Tooltip } from '@mantine/core'
+import {
+  ActionIcon,
+  Badge,
+  Card,
+  Container,
+  Group,
+  Pagination,
+  SegmentedControl,
+  Stack,
+  Table,
+  Text,
+  Title,
+  Tooltip,
+} from '@mantine/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { TbRefresh, TbTrash } from 'react-icons/tb'
 import { apiFetch } from '@/frontend/lib/apiFetch'
-import { type AppLogEntry, PAGE_SIZE, levelBadge } from './shared'
+import { type AppLogEntry, levelBadge, PAGE_SIZE } from './shared'
 
 export function AppLogsPanel() {
   const [levelFilter, setLevelFilter] = useState<string>('all')
@@ -31,7 +44,9 @@ export function AppLogsPanel() {
   const safePage = Math.min(page, totalPages)
   const pagedLogs = ordered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
-  useEffect(() => { setPage(1) }, [levelFilter])
+  useEffect(() => {
+    setPage(1)
+  }, [levelFilter])
 
   return (
     <Container size="lg" px={{ base: 0, sm: 'md' }}>
@@ -39,7 +54,9 @@ export function AppLogsPanel() {
         <Group justify="space-between" wrap="wrap" gap="sm">
           <Group gap="sm">
             <Title order={3}>App Logs</Title>
-            <Badge variant="light" color="gray" size="sm">redis</Badge>
+            <Badge variant="light" color="gray" size="sm">
+              redis
+            </Badge>
           </Group>
           <Group gap="sm" wrap="wrap">
             <SegmentedControl
@@ -54,7 +71,14 @@ export function AppLogsPanel() {
               ]}
             />
             <Tooltip label="Clear all">
-              <ActionIcon variant="subtle" color="red" onClick={() => { if (confirm('Hapus semua app logs?')) clearLogs.mutate() }} loading={clearLogs.isPending}>
+              <ActionIcon
+                variant="subtle"
+                color="red"
+                onClick={() => {
+                  if (confirm('Hapus semua app logs?')) clearLogs.mutate()
+                }}
+                loading={clearLogs.isPending}
+              >
                 <TbTrash size={16} />
               </ActionIcon>
             </Tooltip>
@@ -69,40 +93,62 @@ export function AppLogsPanel() {
         <Card withBorder radius="md" p={0}>
           <Table.ScrollContainer minWidth={480}>
             <Table highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th w={180}>Time</Table.Th>
-                <Table.Th w={70}>Level</Table.Th>
-                <Table.Th>Message</Table.Th>
-                <Table.Th>Detail</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {isLoading && (
-                <Table.Tr><Table.Td colSpan={4}><Text ta="center" c="dimmed" py="md">Loading...</Text></Table.Td></Table.Tr>
-              )}
-              {logs.length === 0 && !isLoading && (
-                <Table.Tr><Table.Td colSpan={4}><Text ta="center" c="dimmed" py="md">Belum ada log</Text></Table.Td></Table.Tr>
-              )}
-              {pagedLogs.map((log) => {
-                const badge = levelBadge[log.level] ?? levelBadge.info
-                return (
-                  <Table.Tr key={log.id}>
-                    <Table.Td>
-                      <Text size="xs" ff="monospace" c="dimmed">
-                        {new Date(log.timestamp).toLocaleString('id-ID', { hour12: false })}
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th w={180}>Time</Table.Th>
+                  <Table.Th w={70}>Level</Table.Th>
+                  <Table.Th>Message</Table.Th>
+                  <Table.Th>Detail</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {isLoading && (
+                  <Table.Tr>
+                    <Table.Td colSpan={4}>
+                      <Text ta="center" c="dimmed" py="md">
+                        Loading...
                       </Text>
                     </Table.Td>
-                    <Table.Td>
-                      <Badge color={badge.color} variant="light" size="xs" tt="uppercase">{log.level}</Badge>
-                    </Table.Td>
-                    <Table.Td><Text size="sm" ff="monospace">{log.message}</Text></Table.Td>
-                    <Table.Td><Text size="xs" c="dimmed" ff="monospace">{log.detail ?? '—'}</Text></Table.Td>
                   </Table.Tr>
-                )
-              })}
-            </Table.Tbody>
-          </Table>
+                )}
+                {logs.length === 0 && !isLoading && (
+                  <Table.Tr>
+                    <Table.Td colSpan={4}>
+                      <Text ta="center" c="dimmed" py="md">
+                        Belum ada log
+                      </Text>
+                    </Table.Td>
+                  </Table.Tr>
+                )}
+                {pagedLogs.map((log) => {
+                  const badge = levelBadge[log.level] ?? levelBadge.info
+                  return (
+                    <Table.Tr key={log.id}>
+                      <Table.Td>
+                        <Text size="xs" ff="monospace" c="dimmed">
+                          {new Date(log.timestamp).toLocaleString('id-ID', { hour12: false })}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge color={badge.color} variant="light" size="xs" tt="uppercase">
+                          {log.level}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" ff="monospace">
+                          {log.message}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="xs" c="dimmed" ff="monospace">
+                          {log.detail ?? '—'}
+                        </Text>
+                      </Table.Td>
+                    </Table.Tr>
+                  )
+                })}
+              </Table.Tbody>
+            </Table>
           </Table.ScrollContainer>
         </Card>
 

@@ -1,8 +1,8 @@
 import { SegmentedControl } from '@mantine/core'
 import type { Edge, Node, NodeChange, Viewport } from '@xyflow/react'
 import { useEdgesState, useNodesState, useReactFlow } from '@xyflow/react'
-import { useCallback, useMemo, useRef, useState } from 'react'
 import ELK from 'elkjs/lib/elk.bundled.js'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import type { LayoutType } from './shared'
 
 const elk = new ELK()
@@ -119,41 +119,65 @@ export function useFlowAutoSave(key: string) {
     try {
       const r = localStorage.getItem(`${key}:viewport`)
       return r ? JSON.parse(r) : null
-    } catch { return null }
+    } catch {
+      return null
+    }
   }, [key])
   const loadPos = useMemo(() => {
     try {
       const r = localStorage.getItem(`${key}:positions`)
       return r ? (JSON.parse(r) as Record<string, { x: number; y: number }>) : null
-    } catch { return null }
+    } catch {
+      return null
+    }
   }, [key])
-  const handleNodesChange = useCallback((changes: NodeChange<Node>[]) => {
-    onNodesChange(changes)
-    clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => {
-      setNodes((cur) => {
-        const pos: Record<string, { x: number; y: number }> = {}
-        for (const n of cur) pos[n.id] = n.position
-        localStorage.setItem(`${key}:positions`, JSON.stringify(pos))
-        return cur
-      })
-    }, 500)
-  }, [onNodesChange, key, setNodes])
-  const handleMoveEnd = useCallback((_e: MouseEvent | TouchEvent | null, vp: Viewport) => {
-    clearTimeout(vpTimer.current)
-    vpTimer.current = setTimeout(() => localStorage.setItem(`${key}:viewport`, JSON.stringify(vp)), 500)
-  }, [key])
+  const handleNodesChange = useCallback(
+    (changes: NodeChange<Node>[]) => {
+      onNodesChange(changes)
+      clearTimeout(saveTimer.current)
+      saveTimer.current = setTimeout(() => {
+        setNodes((cur) => {
+          const pos: Record<string, { x: number; y: number }> = {}
+          for (const n of cur) pos[n.id] = n.position
+          localStorage.setItem(`${key}:positions`, JSON.stringify(pos))
+          return cur
+        })
+      }, 500)
+    },
+    [onNodesChange, key, setNodes],
+  )
+  const handleMoveEnd = useCallback(
+    (_e: MouseEvent | TouchEvent | null, vp: Viewport) => {
+      clearTimeout(vpTimer.current)
+      vpTimer.current = setTimeout(() => localStorage.setItem(`${key}:viewport`, JSON.stringify(vp)), 500)
+    },
+    [key],
+  )
   const { fitView } = useReactFlow()
-  const relayout = useCallback((layout: LayoutType) => {
-    getLayoutedElements(nodes, edges, layout).then(({ nodes: laid }) => {
-      setNodes(laid)
-      localStorage.removeItem(`${key}:positions`)
-      localStorage.removeItem(`${key}:viewport`)
-      const pos: Record<string, { x: number; y: number }> = {}
-      for (const n of laid) pos[n.id] = n.position
-      localStorage.setItem(`${key}:positions`, JSON.stringify(pos))
-      requestAnimationFrame(() => fitView({ padding: 0.2 }))
-    })
-  }, [key, nodes, edges, fitView, setNodes])
-  return { nodes, setNodes, edges, setEdges, onEdgesChange, handleNodesChange, handleMoveEnd, savedVp, loadPos, relayout }
+  const relayout = useCallback(
+    (layout: LayoutType) => {
+      getLayoutedElements(nodes, edges, layout).then(({ nodes: laid }) => {
+        setNodes(laid)
+        localStorage.removeItem(`${key}:positions`)
+        localStorage.removeItem(`${key}:viewport`)
+        const pos: Record<string, { x: number; y: number }> = {}
+        for (const n of laid) pos[n.id] = n.position
+        localStorage.setItem(`${key}:positions`, JSON.stringify(pos))
+        requestAnimationFrame(() => fitView({ padding: 0.2 }))
+      })
+    },
+    [key, nodes, edges, fitView, setNodes],
+  )
+  return {
+    nodes,
+    setNodes,
+    edges,
+    setEdges,
+    onEdgesChange,
+    handleNodesChange,
+    handleMoveEnd,
+    savedVp,
+    loadPos,
+    relayout,
+  }
 }
