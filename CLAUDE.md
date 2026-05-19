@@ -111,3 +111,4 @@ See @docs/DATABASE.md
 See @docs/MCP.md
 See @docs/FILE-HEALTH.md
 See @docs/FEATURE-CHECKLIST.md
+See @docs/SPLIT-CLAUDE.md
