@@ -72,6 +72,34 @@ tests/
   integration/        # API endpoint tests
 ```
 
+## Update Dokumentasi (Wajib)
+
+Setiap kali menyentuh **business logic** — auth flow, role/permission,
+ticket lifecycle, endpoint baru/berubah, schema Prisma, key Redis,
+WS channel, MCP tool, env var, atau aturan kerja AI — **wajib** update
+dokumentasi yang relevan di commit yang sama:
+
+| Yang Disentuh | Dokumen yang Harus Diupdate |
+|---------------|-----------------------------|
+| Endpoint API (tambah/ubah/hapus) | `docs/API.md` |
+| Auth / role / session | `docs/AUTH.md` |
+| Schema Prisma / Redis namespace | `docs/DATABASE.md` |
+| Frontend route / hook / komponen utama | `docs/FRONTEND.md` |
+| MCP tool baru / berubah | `docs/MCP.md` |
+| Aturan/kontrak kerja AI | `docs/AI_CONTRACT.md` |
+| Checklist saat tambah fitur | `docs/FEATURE-CHECKLIST.md` |
+| Aturan ukuran/struktur file | `docs/FILE-HEALTH.md` |
+| Strategi scaling / performance | `docs/SCALING.md` |
+| Struktur project / command utama / overview | `CLAUDE.md` (file ini) |
+
+Aturan:
+- Update doc + kode dalam **commit yang sama**. Doc yang ketinggalan =
+  bug bagi sesi AI berikutnya.
+- Kalau perubahan menghapus/rename sesuatu yang disebut di doc, hapus
+  juga di doc — jangan biarkan referensi mati.
+- Pengecualian: refactor murni internal yang tidak mengubah kontrak
+  publik atau perilaku yang dijanjikan doc. Kalau ragu, update.
+
 ## Detail Docs
 
 See @docs/AI_CONTRACT.md
@@ -82,3 +110,4 @@ See @docs/FRONTEND.md
 See @docs/DATABASE.md
 See @docs/MCP.md
 See @docs/FILE-HEALTH.md
+See @docs/FEATURE-CHECKLIST.md

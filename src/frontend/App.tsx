@@ -1,4 +1,4 @@
-import { ColorSchemeScript, createTheme, MantineProvider } from '@mantine/core'
+import { createTheme, MantineProvider } from '@mantine/core'
 import '@mantine/core/styles.css'
 import { ModalsProvider } from '@mantine/modals'
 import { QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -34,7 +34,6 @@ const queryClient = new QueryClient({
 export function App() {
   return (
     <>
-      <ColorSchemeScript defaultColorScheme="auto" />
       <MantineProvider theme={theme} defaultColorScheme="auto">
         <ModalsProvider>
           <QueryClientProvider client={queryClient}>
