@@ -22,6 +22,7 @@ All routes guarded by `guardSuperAdmin(authUser)` in `src/app.ts`.
 | GET | `/api/admin/dependencies` | NPM packages with versions and importing files |
 | GET | `/api/admin/migrations` | Prisma migration timeline with SQL preview |
 | GET | `/api/admin/sessions` | Active sessions with online status and role breakdown |
+| GET | `/api/admin/file-health` | Scan project files vs limits in `docs/FILE-HEALTH.md` — status ok/warn/critical/exempt, worst offenders |
 
 ## Tickets API (QC/ADMIN/SUPER_ADMIN)
 

@@ -1,11 +1,12 @@
 import { Elysia } from 'elysia'
+import { adminDependenciesRouter } from './dependencies'
+import { adminEnvMapRouter } from './env-map'
+import { adminFileHealthRouter } from './file-health'
+import { adminMigrationsRouter } from './migrations'
 import { adminPresenceSchemaRoutesRouter } from './presence-schema-routes'
 import { adminProjectStructureRouter } from './project-structure'
-import { adminEnvMapRouter } from './env-map'
-import { adminTestCoverageRouter } from './test-coverage'
-import { adminDependenciesRouter } from './dependencies'
-import { adminMigrationsRouter } from './migrations'
 import { adminSessionsRouter } from './sessions'
+import { adminTestCoverageRouter } from './test-coverage'
 
 export const adminInfoRouter = new Elysia()
   .use(adminPresenceSchemaRoutesRouter)
@@ -15,3 +16,4 @@ export const adminInfoRouter = new Elysia()
   .use(adminDependenciesRouter)
   .use(adminMigrationsRouter)
   .use(adminSessionsRouter)
+  .use(adminFileHealthRouter)

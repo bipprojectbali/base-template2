@@ -488,6 +488,19 @@ export const stgTools: ToolModule = {
       },
     )
 
+    // ── file health ───────────────────────────────────────────────────────
+
+    server.registerTool(
+      'stg_file_health',
+      {
+        title: 'STG: File health scan',
+        description:
+          'Run file health scan on staging via /api/admin/file-health (SUPER_ADMIN cookie required, falls back to MCP bearer). Reports line/char counts vs limits in docs/FILE-HEALTH.md.',
+        inputSchema: {},
+      },
+      async () => stgResult(await stgFetch('/api/admin/file-health')),
+    )
+
     // ── db table counts ───────────────────────────────────────────────────
 
     server.registerTool(

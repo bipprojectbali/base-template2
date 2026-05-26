@@ -115,6 +115,13 @@ Ketika bekerja dalam project ini, **Claude wajib**:
 5. **Periksa ukuran file saat ini** sebelum mengedit — jika sudah > 80% dari
    batas, sarankan pecah terlebih dahulu.
 
+6. **Pakai inspektor yang tersedia.** Jangan menebak — cek langsung:
+   - Frontend: buka `/dev?tab=file-health` (SUPER_ADMIN) untuk lihat status
+     semua file dengan progress bar dan worst offenders.
+   - Backend: `GET /api/admin/file-health` (lihat `docs/API.md`).
+   - MCP: panggil tool `project_file_health` lewat `debug-dev` (lokal) atau
+     `stg_file_health` lewat `debug-stg` (staging).
+
 ---
 
 ## Pengecualian

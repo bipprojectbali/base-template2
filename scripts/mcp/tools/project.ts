@@ -31,6 +31,7 @@ const ROUTES_CATALOG = [
   { method: 'GET', path: '/api/admin/dependencies', auth: 'superAdmin', category: 'admin', description: 'NPM deps graph' },
   { method: 'GET', path: '/api/admin/migrations', auth: 'superAdmin', category: 'admin', description: 'Migration timeline' },
   { method: 'GET', path: '/api/admin/sessions', auth: 'superAdmin', category: 'admin', description: 'Active sessions' },
+  { method: 'GET', path: '/api/admin/file-health', auth: 'superAdmin', category: 'admin', description: 'File health scan' },
   { method: 'GET', path: '/health', auth: 'public', category: 'utility', description: 'Health check' },
   { method: 'ALL', path: '/mcp', auth: 'secret', category: 'mcp', description: 'MCP over HTTP (MCP_SECRET bearer)' },
   { method: 'GET', path: '/api/hello', auth: 'public', category: 'utility', description: 'Hello world' },
@@ -147,6 +148,115 @@ export const projectTools: ToolModule = {
           ...optional.map((o) => ({ name: o.name, kind: 'optional' as const, default: o.default, isSet: !!process.env[o.name] })),
         ]
         return jsonText({ total: known.length, variables: known })
+      },
+    )
+
+    server.registerTool(
+      'project_file_health',
+      {
+        title: 'File health scan',
+        description:
+          'Scan project files (src/, prisma/, tests/, scripts/, docs/) and report line/char counts vs limits in docs/FILE-HEALTH.md. Returns status (ok/warn/critical/exempt) per file plus worst offenders. Use this to detect files that should be split.',
+        inputSchema: {},
+      },
+      async () => {
+        type Status = 'ok' | 'warn' | 'critical' | 'exempt'
+        interface Rule { category: string; match: (p: string) => boolean; limitLines: number; limitChars: number }
+        const RULES: Rule[] = [
+          { category: 'test', match: (p) => p.startsWith('tests/'), limitLines: 400, limitChars: 16_000 },
+          { category: 'frontend-route', match: (p) => p.startsWith('src/frontend/routes/'), limitLines: 500, limitChars: 20_000 },
+          { category: 'frontend-hook', match: (p) => p.startsWith('src/frontend/hooks/'), limitLines: 200, limitChars: 8_000 },
+          { category: 'frontend-component', match: (p) => p.startsWith('src/frontend/components/'), limitLines: 300, limitChars: 12_000 },
+          { category: 'frontend', match: (p) => p.startsWith('src/frontend/'), limitLines: 300, limitChars: 12_000 },
+          { category: 'route', match: (p) => p.startsWith('src/routes/'), limitLines: 150, limitChars: 6_000 },
+          { category: 'lib', match: (p) => p.startsWith('src/lib/'), limitLines: 250, limitChars: 10_000 },
+          { category: 'backend', match: (p) => p.startsWith('src/'), limitLines: 300, limitChars: 12_000 },
+          { category: 'prisma', match: (p) => p.startsWith('prisma/'), limitLines: 500, limitChars: 20_000 },
+          { category: 'script', match: (p) => p.startsWith('scripts/'), limitLines: 300, limitChars: 12_000 },
+          { category: 'docs', match: (p) => p.startsWith('docs/'), limitLines: 500, limitChars: 20_000 },
+        ]
+        const EXEMPT = [/\.generated\./, /^prisma\/migrations\//, /\.seed\./, /__fixtures__/, /__mocks__/]
+        const SKIP_DIRS = new Set(['node_modules', 'dist', 'generated', '.git', '.next', 'build', 'coverage'])
+        const EXTS = new Set(['.ts', '.tsx', '.js', '.jsx', '.prisma', '.md'])
+        const HARD_LIMIT = { lines: 500, chars: 20_000 }
+        const root = process.cwd()
+
+        function classify(p: string): Rule {
+          for (const r of RULES) if (r.match(p)) return r
+          return { category: 'other', match: () => true, limitLines: HARD_LIMIT.lines, limitChars: HARD_LIMIT.chars }
+        }
+        function statusFor(ratio: number, exempt: boolean): Status {
+          if (exempt) return 'exempt'
+          if (ratio > 1) return 'critical'
+          if (ratio >= 0.8) return 'warn'
+          return 'ok'
+        }
+
+        const files: any[] = []
+        function walk(dir: string, rel: string) {
+          if (!existsSync(dir)) return
+          for (const entry of readdirSync(dir, { withFileTypes: true })) {
+            if (SKIP_DIRS.has(entry.name)) continue
+            const next = join(dir, entry.name)
+            const nextRel = rel ? `${rel}/${entry.name}` : entry.name
+            if (entry.isDirectory()) { walk(next, nextRel); continue }
+            const dot = entry.name.lastIndexOf('.')
+            if (dot < 0 || !EXTS.has(entry.name.slice(dot))) continue
+            try {
+              const content = readFileSync(next, 'utf-8')
+              const lines = content.split('\n').length
+              const chars = content.length
+              const rule = classify(nextRel)
+              const exempt = EXEMPT.some((re) => re.test(nextRel))
+              const ratioLines = lines / rule.limitLines
+              const ratioChars = chars / rule.limitChars
+              const ratio = Math.max(ratioLines, ratioChars)
+              files.push({
+                path: nextRel,
+                category: rule.category,
+                lines,
+                chars,
+                limitLines: rule.limitLines,
+                limitChars: rule.limitChars,
+                ratioLines: Number(ratioLines.toFixed(3)),
+                ratioChars: Number(ratioChars.toFixed(3)),
+                status: statusFor(ratio, exempt),
+                exempt,
+              })
+            } catch {}
+          }
+        }
+        for (const d of ['src', 'prisma', 'tests', 'scripts', 'docs']) walk(join(root, d), d)
+
+        files.sort((a, b) => {
+          if (a.exempt !== b.exempt) return a.exempt ? 1 : -1
+          return Math.max(b.ratioLines, b.ratioChars) - Math.max(a.ratioLines, a.ratioChars)
+        })
+
+        const byStatus: Record<string, number> = { ok: 0, warn: 0, critical: 0, exempt: 0 }
+        const byCategory: Record<string, number> = {}
+        let totalLines = 0
+        let totalChars = 0
+        for (const f of files) {
+          byStatus[f.status] = (byStatus[f.status] ?? 0) + 1
+          byCategory[f.category] = (byCategory[f.category] ?? 0) + 1
+          totalLines += f.lines
+          totalChars += f.chars
+        }
+
+        return jsonText({
+          summary: {
+            totalFiles: files.length,
+            totalLines,
+            totalChars,
+            hardLimitLines: HARD_LIMIT.lines,
+            hardLimitChars: HARD_LIMIT.chars,
+            byStatus,
+            byCategory,
+          },
+          worstOffenders: files.filter((f) => !f.exempt).slice(0, 15),
+          files,
+        })
       },
     )
 

@@ -58,6 +58,10 @@ Project tab — 10 sub-views (grouped Select):
 
 Each sub-view: independent auto-save via `useFlowAutoSave(key)`. File nodes: double-click to open in editor.
 
+File Health tab (`?tab=file-health`): scan seluruh file project, hitung line/char count vs limit di
+`docs/FILE-HEALTH.md`, tampilkan status (ok/warn/critical/exempt) + worst offenders + progress bar.
+Component: `src/frontend/components/dev/FileHealthPanel.tsx`. Endpoint: `GET /api/admin/file-health`.
+
 ## Dev Tools
 
 - Click-to-source: `Ctrl+Shift+Cmd+C` — custom Vite plugin (`src/vite.ts`) injects `data-inspector-*` attrs

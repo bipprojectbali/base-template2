@@ -199,6 +199,53 @@ describe('GET /api/admin/dependencies', () => {
   })
 })
 
+describe('GET /api/admin/file-health', () => {
+  test('returns 401 without session', async () => {
+    expect((await app.handle(new Request('http://localhost/api/admin/file-health'))).status).toBe(401)
+  })
+  test('returns 403 for non-SUPER_ADMIN', async () => {
+    expect((await adminGet('/api/admin/file-health', nonAdminCookie)).status).toBe(403)
+  })
+  test('returns file health report with summary and worstOffenders', async () => {
+    const res = await adminGet('/api/admin/file-health')
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(Array.isArray(body.files)).toBe(true)
+    expect(Array.isArray(body.worstOffenders)).toBe(true)
+    expect(body.summary.totalFiles).toBeGreaterThan(0)
+    expect(body.summary.totalLines).toBeGreaterThan(0)
+    expect(body.summary.totalChars).toBeGreaterThan(0)
+    expect(body.summary.hardLimitLines).toBe(500)
+    expect(body.summary.hardLimitChars).toBe(20_000)
+    expect(typeof body.summary.byStatus).toBe('object')
+    expect(typeof body.summary.byCategory).toBe('object')
+    // Each file must have the contract fields
+    const f = body.files[0]
+    expect(typeof f.path).toBe('string')
+    expect(typeof f.category).toBe('string')
+    expect(typeof f.lines).toBe('number')
+    expect(typeof f.chars).toBe('number')
+    expect(typeof f.limitLines).toBe('number')
+    expect(typeof f.limitChars).toBe('number')
+    expect(['ok', 'warn', 'critical', 'exempt']).toContain(f.status)
+  })
+  test('correctly classifies test files under tests/ as test category', async () => {
+    const res = await adminGet('/api/admin/file-health')
+    const body = await res.json()
+    const testFile = body.files.find((f: any) => f.path === 'tests/integration/admin-info.test.ts')
+    expect(testFile).toBeDefined()
+    expect(testFile.category).toBe('test')
+    expect(testFile.limitLines).toBe(400)
+  })
+  test('worstOffenders excludes exempt files', async () => {
+    const res = await adminGet('/api/admin/file-health')
+    const body = await res.json()
+    for (const f of body.worstOffenders) {
+      expect(f.exempt).toBe(false)
+    }
+  })
+})
+
 describe('GET /api/version', () => {
   test('returns name and version', async () => {
     const res = await app.handle(new Request('http://localhost/api/version'))

@@ -57,6 +57,7 @@ import {
   TbLockOpen,
   TbLogout,
   TbRefresh,
+  TbRuler2,
   TbServer,
   TbSettings,
   TbShieldCheck,
@@ -70,6 +71,7 @@ import {
 } from 'react-icons/tb'
 import { AppLogsPanel } from '@/frontend/components/dev/AppLogsPanel'
 import { DatabasePanel } from '@/frontend/components/dev/DatabasePanel'
+import { FileHealthPanel } from '@/frontend/components/dev/FileHealthPanel'
 import { OverviewPanel } from '@/frontend/components/dev/OverviewPanel'
 import { PlaceholderPanel } from '@/frontend/components/dev/PlaceholderPanel'
 import { ProjectPanel } from '@/frontend/components/dev/ProjectPanel'
@@ -83,7 +85,7 @@ import { apiFetch } from '@/frontend/lib/apiFetch'
 import { authClient } from '@/lib/auth-client'
 import { rootRoute } from './__root'
 
-const validTabs = ['overview', 'users', 'tickets', 'app-logs', 'user-logs', 'database', 'project', 'settings'] as const
+const validTabs = ['overview', 'users', 'tickets', 'app-logs', 'user-logs', 'database', 'project', 'file-health', 'settings'] as const
 
 export const devRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -129,6 +131,7 @@ const navItems = [
   { label: 'User Logs', icon: TbUserSearch, key: 'user-logs' },
   { label: 'Database', icon: TbDatabase, key: 'database' },
   { label: 'Project', icon: TbSitemap, key: 'project' },
+  { label: 'File Health', icon: TbRuler2, key: 'file-health' },
   { label: 'Settings', icon: TbSettings, key: 'settings' },
 ]
 
@@ -327,6 +330,7 @@ function DevPage() {
         {active === 'user-logs' && <UserLogsPanel />}
         {active === 'database' && <DatabasePanel />}
         {active === 'project' && <ProjectPanel />}
+        {active === 'file-health' && <FileHealthPanel />}
         {active === 'settings' && (
           <PlaceholderPanel title="Settings" desc="System configuration akan ditampilkan di sini." icon={TbSettings} />
         )}
