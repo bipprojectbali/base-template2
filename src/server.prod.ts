@@ -5,8 +5,6 @@
  *
  * Omits Vite dev middleware so the bundle doesn't pull in devDependencies.
  * Dev workflow unchanged — use src/serve.ts as before.
- *
- * TODO: Review API_PREFIXES and startup tasks to match this project.
  */
 
 import fs from 'node:fs'
@@ -15,11 +13,13 @@ import { env } from './lib/env'
 import { runMigrations } from './lib/migrate'
 
 // ─── Route Classification ──────────────────────────────
-// Add any project-specific prefixes (e.g. '/download/', '/install/', '/mcp')
-const API_PREFIXES = ['/api/', '/webhook/', '/ws/', '/health']
+// Auto-detected from src/app.ts + src/routes/**. Verify and add any missing prefixes.
+const API_PREFIXES = ['/api/', '/health', '/mcp', '/ws/']
 
 function isApiRoute(pathname: string): boolean {
-  return API_PREFIXES.some(p => pathname.startsWith(p)) || pathname === '/health'
+  return API_PREFIXES.some(p =>
+    p.endsWith('/') ? pathname.startsWith(p) : pathname === p || pathname.startsWith(p + '/')
+  )
 }
 
 // ─── Frontend Serving (static files from dist/) ───────
@@ -54,10 +54,10 @@ if (process.env.MIGRATE_ON_STARTUP !== 'false') {
 }
 
 // ─── TODO: Add project-specific startup tasks here ────
-// Examples from envman:
-//   import { syncBackupCrons } from './lib/portainer-cron'
-//   syncBackupCrons().catch(console.error)
-//   setInterval(() => cleanupAuditLogs().catch(console.error), 24 * 60 * 60 * 1000)
+// Examples:
+//   import { cleanupOldLogs } from './lib/cleanup'
+//   cleanupOldLogs().catch(console.error)
+//   setInterval(() => cleanupOldLogs().catch(console.error), 24 * 60 * 60 * 1000)
 
 // ─── Elysia App ────────────────────────────────────────
 import { createApp } from './app'
