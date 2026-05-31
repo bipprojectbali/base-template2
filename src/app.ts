@@ -1,6 +1,5 @@
 import { cors } from '@elysiajs/cors'
 import { html } from '@elysiajs/html'
-import { swagger } from '@elysiajs/swagger'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import { Elysia, t } from 'elysia'
 import pkg from '../package.json'
@@ -8,14 +7,14 @@ import { createMcpServer, type McpScope } from '../scripts/mcp/server'
 import { appLog } from './lib/applog'
 import { auth } from './lib/auth'
 import { betterAuthPlugin } from './lib/auth-middleware'
-import { prisma } from './lib/db'
 import { env } from './lib/env'
 import { addConnection, broadcastToAdmins, removeConnection } from './lib/presence'
-import { redis } from './lib/redis'
 import { getIp } from './lib/route-helpers'
+import { swaggerPlugin } from './lib/swagger-config'
 import { adminInfoRouter } from './routes/admin/info'
 import { adminLogsRouter } from './routes/admin/logs'
 import { adminUsersRouter } from './routes/admin/users'
+import { devAuthRouter } from './routes/dev-auth'
 import { ticketsRouter } from './routes/tickets'
 
 export function createApp() {
@@ -32,60 +31,13 @@ export function createApp() {
         }),
       )
       .use(html())
-
-      // ─── Swagger / API Docs ────────────────────────────────
-      .use(
-        swagger({
-          path: '/api/docs',
-          documentation: {
-            info: {
-              title: 'Bun Base Template API',
-              version: pkg.version,
-              description: `Full-stack Bun + Elysia + Better Auth API.\n\n**Auth:** All protected endpoints require a valid session cookie (\`better-auth.session_token\`).\n\n**Roles:** \`USER\` → \`QC\` → \`ADMIN\` → \`SUPER_ADMIN\``,
-              contact: { name: 'API Docs', url: '/api/docs' },
-            },
-            tags: [
-              { name: 'Utility', description: 'Health check, version, and example routes' },
-              { name: 'Auth', description: 'Better Auth — sign in, sign out, session, Google OAuth' },
-              { name: 'Tickets', description: 'Ticket management — requires QC, ADMIN, or SUPER_ADMIN' },
-              { name: 'Admin — Users', description: 'User management — requires SUPER_ADMIN' },
-              { name: 'Admin — Logs', description: 'App and audit logs — requires SUPER_ADMIN' },
-              {
-                name: 'Admin — Info',
-                description:
-                  'Project introspection (schema, routes, env, coverage, deps, migrations, sessions) — requires SUPER_ADMIN',
-              },
-            ],
-            components: {
-              securitySchemes: {
-                cookieAuth: {
-                  type: 'apiKey',
-                  in: 'cookie',
-                  name: 'better-auth.session_token',
-                  description: 'Session cookie set by Better Auth on sign-in',
-                },
-              },
-            },
-          },
-          scalarConfig: {
-            spec: { url: '/api/docs/json' },
-          },
-          swaggerOptions: {
-            persistAuthorization: true,
-            displayRequestDuration: true,
-            defaultModelsExpandDepth: 2,
-            defaultModelExpandDepth: 2,
-            docExpansion: 'list',
-            filter: true,
-            showExtensions: true,
-          },
-        }),
-      )
+      .use(swaggerPlugin)
 
       // ─── Better Auth (handles /api/auth/* routes) ─────────
       .use(betterAuthPlugin)
 
       // ─── Sub-routers ──────────────────────────────────────
+      .use(devAuthRouter)
       .use(adminUsersRouter)
       .use(adminLogsRouter)
       .use(adminInfoRouter)
@@ -140,69 +92,6 @@ export function createApp() {
           responses: { 200: { description: 'Server is healthy' } },
         },
       })
-
-      // ─── Dev Auth (development only) ──────────────────────
-      .get(
-        '/api/dev-auth/login-as/:email',
-        async ({
-          request,
-          params,
-          set,
-          query,
-        }: {
-          request: Request
-          params: { email: string }
-          set: any
-          query: Record<string, string>
-        }) => {
-          if (env.NODE_ENV !== 'development') {
-            set.status = 404
-            return { error: 'Not found' }
-          }
-          const user = await prisma.user.findUnique({ where: { email: params.email } })
-          if (!user) {
-            set.status = 404
-            return { error: `User not found: ${params.email}` }
-          }
-
-          const token = crypto.randomUUID()
-          const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          const sessionRecord = await prisma.session.create({
-            data: { token, userId: user.id, expiresAt, ipAddress: getIp(request) },
-          })
-
-          const sessionPayload = JSON.stringify({ ...sessionRecord, user })
-          await redis.set(`ba:kv:${token}`, sessionPayload, 'EX', 7 * 24 * 60 * 60)
-
-          appLog('info', `Dev-auth login: ${user.email} (${user.role})`, getIp(request))
-
-          const cookieHeader = `better-auth.session_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`
-          const redirect = (query as Record<string, string>).redirect
-          if (redirect) {
-            set.status = 302
-            set.headers.location = redirect
-            set.headers['set-cookie'] = cookieHeader
-            return
-          }
-          set.headers['set-cookie'] = cookieHeader
-          return { user: { id: user.id, name: user.name, email: user.email, role: user.role } }
-        },
-        {
-          detail: {
-            tags: ['Auth'],
-            summary: 'Dev login (development only)',
-            description:
-              '**Development only.** Returns 404 in production. Creates a session for any user by email without a password check. Useful for testing different roles.',
-            responses: {
-              200: { description: 'Session created and cookie set' },
-              302: { description: 'Redirect to ?redirect= param with cookie set' },
-              404: { description: 'User not found or production environment' },
-            },
-          },
-          params: t.Object({ email: t.String({ description: 'Email of the user to log in as' }) }),
-          query: t.Object({ redirect: t.Optional(t.String({ description: 'Redirect path after login' })) }),
-        },
-      )
 
       // ─── WebSocket Presence ────────────────────────────────
       .ws('/ws/presence', {

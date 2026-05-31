@@ -17,8 +17,8 @@ import { runMigrations } from './lib/migrate'
 const API_PREFIXES = ['/api/', '/health', '/mcp', '/ws/']
 
 function isApiRoute(pathname: string): boolean {
-  return API_PREFIXES.some(p =>
-    p.endsWith('/') ? pathname.startsWith(p) : pathname === p || pathname.startsWith(p + '/')
+  return API_PREFIXES.some((p) =>
+    p.endsWith('/') ? pathname.startsWith(p) : pathname === p || pathname.startsWith(p + '/'),
   )
 }
 
@@ -32,9 +32,7 @@ async function serveFrontend(request: Request): Promise<Response> {
     const isHashed = pathname.startsWith('/assets/')
     return new Response(Bun.file(filePath), {
       headers: {
-        'Cache-Control': isHashed
-          ? 'public, max-age=31536000, immutable'
-          : 'public, max-age=0, must-revalidate',
+        'Cache-Control': isHashed ? 'public, max-age=31536000, immutable' : 'public, max-age=0, must-revalidate',
       },
     })
   }

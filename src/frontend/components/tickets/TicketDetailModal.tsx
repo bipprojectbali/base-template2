@@ -1,21 +1,9 @@
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  Divider,
-  Group,
-  Menu,
-  Modal,
-  Select,
-  Stack,
-  Text,
-  Textarea,
-  TextInput,
-} from '@mantine/core'
+import { Alert, Badge, Button, Card, Divider, Group, Menu, Modal, Stack, Text } from '@mantine/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { TbCheck, TbMessagePlus, TbPaperclip, TbRotate } from 'react-icons/tb'
+import { TbCheck, TbRotate } from 'react-icons/tb'
+import { CommentSection } from './TicketDetailModal.comments'
+import { EvidenceSection } from './TicketDetailModal.evidence'
 import { PRIORITY_COLOR, STATUS_COLOR, type TicketDetail, ticketApi } from './types'
 
 interface Props {
@@ -200,124 +188,25 @@ export function TicketDetailModal({ id, onClose, canQc, canAdmin }: Props) {
             )}
           </Card>
 
-          <Card withBorder padding="sm" radius="sm">
-            <Text size="xs" c="dimmed" mb={6}>
-              Comments ({ticket.comments.length})
-            </Text>
-            <Stack gap="xs">
-              {ticket.comments.length === 0 && (
-                <Text size="xs" c="dimmed">
-                  No comments yet
-                </Text>
-              )}
-              {ticket.comments.map((c) => (
-                <Card key={c.id} withBorder padding="xs" radius="xs">
-                  <Group gap="xs" mb={2}>
-                    <Badge
-                      size="xs"
-                      color={c.authorTag === 'CLAUDE' ? 'violet' : c.authorTag === 'QC' ? 'yellow' : 'blue'}
-                    >
-                      {c.authorTag}
-                    </Badge>
-                    <Text size="xs" c="dimmed">
-                      {c.author?.name ?? 'System'}
-                    </Text>
-                    <Text size="xs" c="dimmed">
-                      · {new Date(c.createdAt).toLocaleString()}
-                    </Text>
-                  </Group>
-                  <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
-                    {c.body}
-                  </Text>
-                </Card>
-              ))}
-            </Stack>
-            <Group mt="sm" align="flex-end">
-              <Textarea
-                placeholder="Add a comment…"
-                value={commentBody}
-                onChange={(e) => setCommentBody(e.currentTarget.value)}
-                autosize
-                minRows={2}
-                style={{ flex: 1 }}
-              />
-              <Button
-                leftSection={<TbMessagePlus size={14} />}
-                disabled={!commentBody.trim()}
-                loading={addComment.isPending}
-                onClick={() => addComment.mutate(commentBody.trim())}
-              >
-                Send
-              </Button>
-            </Group>
-          </Card>
+          <CommentSection
+            comments={ticket.comments}
+            commentBody={commentBody}
+            setCommentBody={setCommentBody}
+            isPending={addComment.isPending}
+            onSubmit={(body) => addComment.mutate(body)}
+          />
 
-          <Card withBorder padding="sm" radius="sm">
-            <Text size="xs" c="dimmed" mb={6}>
-              Evidence ({ticket.evidence.length})
-            </Text>
-            <Stack gap={4}>
-              {ticket.evidence.length === 0 && (
-                <Text size="xs" c="dimmed">
-                  No evidence attached
-                </Text>
-              )}
-              {ticket.evidence.map((e) => (
-                <Group key={e.id} gap="xs">
-                  <Badge size="xs" variant="outline">
-                    {e.kind}
-                  </Badge>
-                  <Text size="xs" ff="monospace" style={{ wordBreak: 'break-all' }}>
-                    {e.url}
-                  </Text>
-                  {e.note && (
-                    <Text size="xs" c="dimmed">
-                      — {e.note}
-                    </Text>
-                  )}
-                </Group>
-              ))}
-            </Stack>
-            <Group mt="sm" align="flex-end">
-              <Select
-                label="Kind"
-                size="xs"
-                value={evidenceKind}
-                onChange={(v) => setEvidenceKind(v || 'screenshot')}
-                data={['screenshot', 'commit', 'test_log', 'trace', 'other']}
-                w={130}
-              />
-              <TextInput
-                label="URL / path / hash"
-                size="xs"
-                value={evidenceUrl}
-                onChange={(e) => setEvidenceUrl(e.currentTarget.value)}
-                style={{ flex: 1 }}
-              />
-              <TextInput
-                label="Note"
-                size="xs"
-                value={evidenceNote}
-                onChange={(e) => setEvidenceNote(e.currentTarget.value)}
-                w={180}
-              />
-              <Button
-                size="xs"
-                leftSection={<TbPaperclip size={14} />}
-                disabled={!evidenceUrl.trim()}
-                loading={addEvidence.isPending}
-                onClick={() =>
-                  addEvidence.mutate({
-                    kind: evidenceKind,
-                    url: evidenceUrl.trim(),
-                    note: evidenceNote.trim() || undefined,
-                  })
-                }
-              >
-                Attach
-              </Button>
-            </Group>
-          </Card>
+          <EvidenceSection
+            evidence={ticket.evidence}
+            evidenceKind={evidenceKind}
+            setEvidenceKind={setEvidenceKind}
+            evidenceUrl={evidenceUrl}
+            setEvidenceUrl={setEvidenceUrl}
+            evidenceNote={evidenceNote}
+            setEvidenceNote={setEvidenceNote}
+            isPending={addEvidence.isPending}
+            onSubmit={(body) => addEvidence.mutate(body)}
+          />
         </Stack>
       )}
     </Modal>

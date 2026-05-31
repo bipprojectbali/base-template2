@@ -85,7 +85,17 @@ import { apiFetch } from '@/frontend/lib/apiFetch'
 import { authClient } from '@/lib/auth-client'
 import { rootRoute } from './__root'
 
-const validTabs = ['overview', 'users', 'tickets', 'app-logs', 'user-logs', 'database', 'project', 'file-health', 'settings'] as const
+const validTabs = [
+  'overview',
+  'users',
+  'tickets',
+  'app-logs',
+  'user-logs',
+  'database',
+  'project',
+  'file-health',
+  'settings',
+] as const
 
 export const devRoute = createRoute({
   getParentRoute: () => rootRoute,

@@ -1894,3 +1894,5 @@ Kalau kamu sudah baca seluruh instruksi ini:
 5. Kalau Fase 0 lulus → lanjut Fase 1
 
 **Jangan tanya. Langsung mulai. Setiap langkah menulis bukti. Setiap klaim dengan artifact.**
+
+
