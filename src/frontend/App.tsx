@@ -1,6 +1,8 @@
 import { createTheme, MantineProvider } from '@mantine/core'
 import '@mantine/core/styles.css'
 import { ModalsProvider } from '@mantine/modals'
+import { Notifications } from '@mantine/notifications'
+import '@mantine/notifications/styles.css'
 import { QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 import { router } from './router'
@@ -35,6 +37,7 @@ export function App() {
   return (
     <>
       <MantineProvider theme={theme} defaultColorScheme="auto">
+        <Notifications position="top-right" />
         <ModalsProvider>
           <QueryClientProvider client={queryClient}>
             <RouterProvider router={router} context={{ queryClient }} />

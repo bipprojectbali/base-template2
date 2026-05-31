@@ -1,7 +1,9 @@
 import {
   ActionIcon,
   Badge,
+  Button,
   Card,
+  Checkbox,
   Container,
   Group,
   Progress,
@@ -15,9 +17,10 @@ import {
   Title,
   Tooltip,
 } from '@mantine/core'
+import { notifications } from '@mantine/notifications'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import { TbAlertTriangle, TbCheck, TbFileCheck, TbRefresh, TbRuler2, TbShieldOff, TbX } from 'react-icons/tb'
+import { TbAlertTriangle, TbCheck, TbClipboardCheck, TbCopy, TbFileCheck, TbRefresh, TbRuler2, TbShieldOff, TbX } from 'react-icons/tb'
 import { apiFetch } from '@/frontend/lib/apiFetch'
 
 interface FileHealth {
@@ -83,6 +86,7 @@ export function FileHealthPanel() {
 
   const [statusFilter, setStatusFilter] = useState<'all' | FileHealth['status']>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
 
   const files = data?.files ?? []
   const categories = useMemo(() => {
@@ -98,6 +102,44 @@ export function FileHealthPanel() {
       return true
     })
   }, [files, statusFilter, categoryFilter])
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((f) => selected.has(f.path))
+  const someFilteredSelected = filtered.some((f) => selected.has(f.path))
+
+  function toggleRow(path: string) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      next.has(path) ? next.delete(path) : next.add(path)
+      return next
+    })
+  }
+
+  function toggleAll() {
+    if (allFilteredSelected) {
+      setSelected((prev) => {
+        const next = new Set(prev)
+        for (const f of filtered) next.delete(f.path)
+        return next
+      })
+    } else {
+      setSelected((prev) => {
+        const next = new Set(prev)
+        for (const f of filtered) next.add(f.path)
+        return next
+      })
+    }
+  }
+
+  function copyPaths(paths: string[]) {
+    navigator.clipboard.writeText(paths.join('\n'))
+    notifications.show({
+      title: 'Copied',
+      message: paths.length === 1 ? paths[0] : `${paths.length} paths copied`,
+      color: 'green',
+      icon: <TbClipboardCheck size={16} />,
+      autoClose: 2000,
+    })
+  }
 
   const summary = data?.summary
   const counts: Record<string, number> = {
@@ -186,28 +228,60 @@ export function FileHealthPanel() {
         )}
 
         <Card withBorder radius="md" p="md">
-          <Group justify="space-between" wrap="wrap" gap="sm">
-            <SegmentedControl
-              size="xs"
-              value={statusFilter}
-              onChange={(v) => setStatusFilter(v as typeof statusFilter)}
-              data={[
-                { label: `All (${files.length})`, value: 'all' },
-                { label: `OK (${counts.ok})`, value: 'ok' },
-                { label: `Warn (${counts.warn})`, value: 'warn' },
-                { label: `Critical (${counts.critical})`, value: 'critical' },
-                { label: `Exempt (${summary?.byStatus.exempt ?? 0})`, value: 'exempt' },
-              ]}
-            />
-            <Select
-              size="xs"
-              w={220}
-              value={categoryFilter}
-              onChange={(v) => setCategoryFilter(v ?? 'all')}
-              data={categories.map((c) => ({ value: c, label: c === 'all' ? 'All categories' : c }))}
-              clearable={false}
-            />
-          </Group>
+          <Stack gap="sm">
+            <Group justify="space-between" wrap="wrap" gap="sm">
+              <SegmentedControl
+                size="xs"
+                value={statusFilter}
+                onChange={(v) => setStatusFilter(v as typeof statusFilter)}
+                data={[
+                  { label: `All (${files.length})`, value: 'all' },
+                  { label: `OK (${counts.ok})`, value: 'ok' },
+                  { label: `Warn (${counts.warn})`, value: 'warn' },
+                  { label: `Critical (${counts.critical})`, value: 'critical' },
+                  { label: `Exempt (${summary?.byStatus.exempt ?? 0})`, value: 'exempt' },
+                ]}
+              />
+              <Select
+                size="xs"
+                w={220}
+                value={categoryFilter}
+                onChange={(v) => setCategoryFilter(v ?? 'all')}
+                data={categories.map((c) => ({ value: c, label: c === 'all' ? 'All categories' : c }))}
+                clearable={false}
+              />
+            </Group>
+            <Group gap="xs">
+              <Tooltip label={`Copy ${selected.size} selected path(s)`} withArrow>
+                <Button
+                  size="xs"
+                  variant="light"
+                  leftSection={<TbCopy size={14} />}
+                  disabled={selected.size === 0}
+                  onClick={() => copyPaths([...selected])}
+                >
+                  Copy Selected ({selected.size})
+                </Button>
+              </Tooltip>
+              <Tooltip label={`Copy all ${filtered.length} visible paths`} withArrow>
+                <Button
+                  size="xs"
+                  variant="light"
+                  color="gray"
+                  leftSection={<TbCopy size={14} />}
+                  disabled={filtered.length === 0}
+                  onClick={() => copyPaths(filtered.map((f) => f.path))}
+                >
+                  Copy All ({filtered.length})
+                </Button>
+              </Tooltip>
+              {selected.size > 0 && (
+                <Button size="xs" variant="subtle" color="gray" onClick={() => setSelected(new Set())}>
+                  Clear selection
+                </Button>
+              )}
+            </Group>
+          </Stack>
         </Card>
 
         <Card withBorder radius="md" p={0}>
@@ -215,18 +289,28 @@ export function FileHealthPanel() {
             <Table highlightOnHover striped="even">
               <Table.Thead>
                 <Table.Tr>
+                  <Table.Th w={36}>
+                    <Checkbox
+                      size="xs"
+                      checked={allFilteredSelected}
+                      indeterminate={someFilteredSelected && !allFilteredSelected}
+                      onChange={toggleAll}
+                      disabled={filtered.length === 0}
+                    />
+                  </Table.Th>
                   <Table.Th>Path</Table.Th>
                   <Table.Th>Category</Table.Th>
                   <Table.Th ta="right">Lines</Table.Th>
                   <Table.Th ta="right">Chars</Table.Th>
                   <Table.Th style={{ minWidth: 180 }}>Usage</Table.Th>
                   <Table.Th>Status</Table.Th>
+                  <Table.Th w={40} />
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {isLoading && (
                   <Table.Tr>
-                    <Table.Td colSpan={6}>
+                    <Table.Td colSpan={8}>
                       <Text ta="center" c="dimmed" py="md">
                         Scanning project files...
                       </Text>
@@ -235,7 +319,7 @@ export function FileHealthPanel() {
                 )}
                 {!isLoading && filtered.length === 0 && (
                   <Table.Tr>
-                    <Table.Td colSpan={6}>
+                    <Table.Td colSpan={8}>
                       <Text ta="center" c="dimmed" py="md">
                         No files match the current filter.
                       </Text>
@@ -246,8 +330,12 @@ export function FileHealthPanel() {
                   const meta = STATUS_META[f.status]
                   const worst = Math.max(f.ratioLines, f.ratioChars)
                   const pct = Math.min(worst * 100, 200)
+                  const isSelected = selected.has(f.path)
                   return (
-                    <Table.Tr key={f.path}>
+                    <Table.Tr key={f.path} bg={isSelected ? 'var(--mantine-color-blue-light)' : undefined}>
+                      <Table.Td>
+                        <Checkbox size="xs" checked={isSelected} onChange={() => toggleRow(f.path)} />
+                      </Table.Td>
                       <Table.Td>
                         <Text size="sm" ff="monospace">
                           {f.path}
@@ -295,6 +383,13 @@ export function FileHealthPanel() {
                             {meta.label}
                           </Group>
                         </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Tooltip label="Copy path" withArrow>
+                          <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => copyPaths([f.path])}>
+                            <TbCopy size={13} />
+                          </ActionIcon>
+                        </Tooltip>
                       </Table.Td>
                     </Table.Tr>
                   )
