@@ -1,6 +1,8 @@
-import { ActionIcon, Badge, Card, Checkbox, Group, Progress, Table, Text, Tooltip } from '@mantine/core'
+import { ActionIcon, Badge, Card, Checkbox, Group, Pagination, Progress, Table, Text, Tooltip } from '@mantine/core'
+import { useEffect, useState } from 'react'
 import { TbCopy } from 'react-icons/tb'
 import { type FileHealth, fmtNumber, ratioColor, STATUS_META } from './FileHealthPanel.types'
+import { PAGE_SIZE } from './shared'
 
 interface Props {
   filtered: FileHealth[]
@@ -23,6 +25,11 @@ export function FileHealthTable({
   someFilteredSelected,
   onCopyPath,
 }: Props) {
+  const [page, setPage] = useState(1)
+  useEffect(() => { setPage(1) }, [filtered])
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
   return (
     <Card withBorder radius="md" p={0}>
       <Table.ScrollContainer minWidth={720}>
@@ -66,7 +73,7 @@ export function FileHealthTable({
                 </Table.Td>
               </Table.Tr>
             )}
-            {filtered.map((f) => {
+            {paged.map((f) => {
               const meta = STATUS_META[f.status]
               const worst = Math.max(f.ratioLines, f.ratioChars)
               const pct = Math.min(worst * 100, 200)
@@ -137,6 +144,20 @@ export function FileHealthTable({
           </Table.Tbody>
         </Table>
       </Table.ScrollContainer>
+      {totalPages > 1 && (
+        <Group
+          justify="space-between"
+          align="center"
+          px="md"
+          py="xs"
+          style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}
+        >
+          <Text size="xs" c="dimmed">
+            {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+          </Text>
+          <Pagination value={page} onChange={setPage} total={totalPages} size="sm" />
+        </Group>
+      )}
     </Card>
   )
 }
