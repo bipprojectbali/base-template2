@@ -39,3 +39,9 @@ src/frontend/routeTree.gen.ts
 .playwright-mcp/
 .claude/scheduled_tasks.lock
 /*.png
+
+# Scratch / ad-hoc files — never commit
+x.sh
+x.yml
+tasks/
+SOLUSI/
