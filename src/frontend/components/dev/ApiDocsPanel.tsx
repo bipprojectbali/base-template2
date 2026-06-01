@@ -16,9 +16,10 @@ import {
   Tooltip,
   useMantineColorScheme,
 } from '@mantine/core'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   TbApi,
+  TbBook,
   TbCheck,
   TbCode,
   TbCopy,
@@ -27,6 +28,7 @@ import {
   TbFileCode,
   TbRefresh,
 } from 'react-icons/tb'
+import Editor from '@monaco-editor/react'
 
 export function ApiDocsPanel() {
   const { colorScheme } = useMantineColorScheme()
@@ -34,8 +36,8 @@ export function ApiDocsPanel() {
   const [refreshKey, setRefreshKey] = useState(0)
 
   const apiBaseUrl = window.location.origin
-  const swaggerUrl = `${apiBaseUrl}/swagger`
-  const openApiUrl = `${apiBaseUrl}/swagger/json`
+  const swaggerUrl = `${apiBaseUrl}/api/docs`
+  const openApiUrl = `${apiBaseUrl}/api/docs/json`
 
   const handleRefresh = () => {
     setRefreshKey((prev) => prev + 1)
@@ -44,6 +46,9 @@ export function ApiDocsPanel() {
   const handleDownloadOpenApi = async () => {
     try {
       const response = await fetch(openApiUrl)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
       const data = await response.json()
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
@@ -56,6 +61,7 @@ export function ApiDocsPanel() {
       URL.revokeObjectURL(url)
     } catch (error) {
       console.error('Failed to download OpenAPI JSON:', error)
+      alert('Failed to download OpenAPI JSON. Please check console for details.')
     }
   }
 
@@ -88,7 +94,7 @@ export function ApiDocsPanel() {
         <Card withBorder padding="md" radius="md">
           <Group gap="xs" mb="xs">
             <ThemeIcon size="md" variant="light" color="blue">
-              <TbApi size={16} />
+              <TbBook size={16} />
             </ThemeIcon>
             <Text size="sm" fw={600}>
               Swagger UI
@@ -145,7 +151,7 @@ export function ApiDocsPanel() {
               {
                 label: (
                   <Group gap={6}>
-                    <TbApi size={14} />
+                    <TbBook size={14} />
                     <span>Swagger UI</span>
                   </Group>
                 ),
@@ -224,7 +230,7 @@ export function ApiDocsPanel() {
                 href={swaggerUrl}
                 target="_blank"
                 variant="subtle"
-                size="compact-xs"
+                size="xs"
                 rightSection={<TbExternalLink size={12} />}
               >
                 Open
@@ -251,7 +257,7 @@ export function ApiDocsPanel() {
                 href={openApiUrl}
                 target="_blank"
                 variant="subtle"
-                size="compact-xs"
+                size="xs"
                 rightSection={<TbExternalLink size={12} />}
               >
                 Open
@@ -270,13 +276,15 @@ function OpenApiJsonViewer({ url, refreshKey }: { url: string; refreshKey: numbe
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useState(() => {
+  useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true)
         setError(null)
         const response = await fetch(url)
-        if (!response.ok) throw new Error('Failed to fetch OpenAPI JSON')
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
         const data = await response.json()
         setJsonData(JSON.stringify(data, null, 2))
       } catch (err) {
@@ -286,7 +294,7 @@ function OpenApiJsonViewer({ url, refreshKey }: { url: string; refreshKey: numbe
       }
     }
     fetchData()
-  })
+  }, [url, refreshKey])
 
   if (loading) {
     return (
@@ -305,51 +313,50 @@ function OpenApiJsonViewer({ url, refreshKey }: { url: string; refreshKey: numbe
   }
 
   return (
-    <Box
-      style={{
-        position: 'relative',
-        width: '100%',
-        height: 'calc(100vh - 400px)',
-        minHeight: '500px',
-        borderRadius: '8px',
-        overflow: 'auto',
-        border: '1px solid var(--mantine-color-default-border)',
-        backgroundColor: colorScheme === 'dark' ? '#1e1e1e' : '#f8f9fa',
-      }}
-    >
-      <Box p="md">
-        <Group justify="space-between" mb="md">
-          <Badge variant="light" color="grape">
-            OpenAPI 3.x
-          </Badge>
-          <CopyButton value={jsonData}>
-            {({ copied, copy }) => (
-              <Button
-                variant="light"
-                size="xs"
-                leftSection={copied ? <TbCheck size={14} /> : <TbCopy size={14} />}
-                color={copied ? 'teal' : 'blue'}
-                onClick={copy}
-              >
-                {copied ? 'Copied!' : 'Copy JSON'}
-              </Button>
-            )}
-          </CopyButton>
-        </Group>
-        <pre
-          style={{
-            margin: 0,
-            padding: '1rem',
-            backgroundColor: colorScheme === 'dark' ? '#2d2d2d' : '#ffffff',
-            borderRadius: '4px',
-            fontSize: '12px',
-            lineHeight: '1.5',
-            overflow: 'auto',
-            color: colorScheme === 'dark' ? '#d4d4d4' : '#1e1e1e',
+    <Box>
+      <Group justify="space-between" mb="md">
+        <Badge variant="light" color="grape">
+          OpenAPI 3.x
+        </Badge>
+        <CopyButton value={jsonData}>
+          {({ copied, copy }) => (
+            <Button
+              variant="light"
+              size="xs"
+              leftSection={copied ? <TbCheck size={14} /> : <TbCopy size={14} />}
+              color={copied ? 'teal' : 'blue'}
+              onClick={copy}
+            >
+              {copied ? 'Copied!' : 'Copy JSON'}
+            </Button>
+          )}
+        </CopyButton>
+      </Group>
+      <Box
+        style={{
+          border: '1px solid var(--mantine-color-default-border)',
+          borderRadius: '8px',
+          overflow: 'hidden',
+        }}
+      >
+        <Editor
+          height="calc(100vh - 450px)"
+          defaultLanguage="json"
+          value={jsonData}
+          theme={colorScheme === 'dark' ? 'vs-dark' : 'light'}
+          options={{
+            readOnly: true,
+            minimap: { enabled: true },
+            scrollBeyondLastLine: false,
+            fontSize: 13,
+            lineNumbers: 'on',
+            folding: true,
+            automaticLayout: true,
+            wordWrap: 'on',
+            formatOnPaste: true,
+            formatOnType: true,
           }}
-        >
-          <code>{jsonData}</code>
-        </pre>
+        />
       </Box>
     </Box>
   )

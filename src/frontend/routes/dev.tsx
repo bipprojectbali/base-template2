@@ -43,6 +43,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import '@xyflow/react/dist/style.css'
 import { modals } from '@mantine/modals'
 import {
+  TbApi,
   TbBug,
   TbChevronRight,
   TbCircleFilled,
@@ -77,6 +78,7 @@ import { PlaceholderPanel } from '@/frontend/components/dev/PlaceholderPanel'
 import { ProjectPanel } from '@/frontend/components/dev/ProjectPanel'
 import { UserLogsPanel } from '@/frontend/components/dev/UserLogsPanel'
 import { UsersPanel } from '@/frontend/components/dev/UsersPanel'
+import { ApiDocsPanel } from '@/frontend/components/dev/ApiDocsPanel'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { TicketsPanel } from '@/frontend/components/TicketsPanel'
 import { type Role, useLogout, useSession } from '@/frontend/hooks/useAuth'
@@ -94,6 +96,7 @@ const validTabs = [
   'database',
   'project',
   'file-health',
+  'api-docs',
   'settings',
 ] as const
 
@@ -142,6 +145,7 @@ const navItems = [
   { label: 'Database', icon: TbDatabase, key: 'database' },
   { label: 'Project', icon: TbSitemap, key: 'project' },
   { label: 'File Health', icon: TbRuler2, key: 'file-health' },
+  { label: 'API Docs', icon: TbApi, key: 'api-docs' },
   { label: 'Settings', icon: TbSettings, key: 'settings' },
 ]
 
@@ -341,6 +345,7 @@ function DevPage() {
         {active === 'database' && <DatabasePanel />}
         {active === 'project' && <ProjectPanel />}
         {active === 'file-health' && <FileHealthPanel />}
+        {active === 'api-docs' && <ApiDocsPanel />}
         {active === 'settings' && (
           <PlaceholderPanel title="Settings" desc="System configuration akan ditampilkan di sini." icon={TbSettings} />
         )}
