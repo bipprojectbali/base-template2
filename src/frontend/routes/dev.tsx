@@ -1,73 +1,37 @@
 import {
   ActionIcon,
   AppShell,
-  Badge,
   Box,
   Burger,
-  Card,
-  Container,
   Divider,
   Group,
-  Menu,
   NavLink,
-  Pagination,
-  SegmentedControl,
-  Select,
-  SimpleGrid,
   Stack,
-  Table,
   Text,
   ThemeIcon,
-  Title,
   Tooltip,
 } from '@mantine/core'
 import { useDisclosure, useMediaQuery } from '@mantine/hooks'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createRoute, redirect, useNavigate } from '@tanstack/react-router'
-import {
-  Background,
-  Controls,
-  type Edge,
-  Handle,
-  MarkerType,
-  type Node,
-  Position,
-  ReactFlow,
-  ReactFlowProvider,
-  useEdgesState,
-  useNodesState,
-  useReactFlow,
-} from '@xyflow/react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useState } from 'react'
 import '@xyflow/react/dist/style.css'
 import { modals } from '@mantine/modals'
 import {
   TbApi,
   TbBug,
   TbChevronRight,
-  TbCircleFilled,
   TbCode,
   TbDatabase,
-  TbDots,
-  TbFileText,
   TbLayoutDashboard,
   TbLayoutSidebarLeftCollapse,
   TbLayoutSidebarLeftExpand,
-  TbLock,
-  TbLockOpen,
   TbLogout,
-  TbRefresh,
   TbRuler2,
   TbServer,
   TbSettings,
-  TbShieldCheck,
-  TbShieldOff,
   TbSitemap,
-  TbTrash,
-  TbUser,
   TbUserSearch,
   TbUsers,
-  TbWifi,
 } from 'react-icons/tb'
 import { ApiDocsPanel } from '@/frontend/components/dev/ApiDocsPanel'
 import { AppLogsPanel } from '@/frontend/components/dev/AppLogsPanel'
@@ -82,8 +46,6 @@ import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { TicketsPanel } from '@/frontend/components/TicketsPanel'
 import { UserAvatar } from '@/frontend/components/UserAvatar'
 import { useLogout, useSession } from '@/frontend/hooks/useAuth'
-import { usePresence } from '@/frontend/hooks/usePresence'
-import { apiFetch } from '@/frontend/lib/apiFetch'
 import { authClient } from '@/lib/auth-client'
 import { rootRoute } from './__root'
 

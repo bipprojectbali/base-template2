@@ -1,4 +1,4 @@
-import { Group, Text } from '@mantine/core'
+import { Text } from '@mantine/core'
 import { Handle, Position } from '@xyflow/react'
 import { EnvVarNode, PackageNode } from './nodeTypes.env'
 import { FileNode2, SourceNode, TestNodeComp } from './nodeTypes.file'

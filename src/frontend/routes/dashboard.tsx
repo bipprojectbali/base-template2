@@ -9,7 +9,6 @@ import {
   Stack,
   Text,
   ThemeIcon,
-  Title,
   Tooltip,
 } from '@mantine/core'
 import { useDisclosure, useMediaQuery } from '@mantine/hooks'
