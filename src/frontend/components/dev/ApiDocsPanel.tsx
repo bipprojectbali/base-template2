@@ -83,10 +83,22 @@ export function ApiDocsPanel() {
             <ThemeIcon size="md" variant="light" color="blue">
               <TbBook size={16} />
             </ThemeIcon>
-            <Text size="sm" fw={600}>Swagger UI</Text>
+            <Text size="sm" fw={600}>
+              Swagger UI
+            </Text>
           </Group>
-          <Text size="xs" c="dimmed" mb="md">Interface interaktif untuk testing API</Text>
-          <Button component="a" href={swaggerUrl} target="_blank" variant="light" size="xs" fullWidth leftSection={<TbExternalLink size={14} />}>
+          <Text size="xs" c="dimmed" mb="md">
+            Interface interaktif untuk testing API
+          </Text>
+          <Button
+            component="a"
+            href={swaggerUrl}
+            target="_blank"
+            variant="light"
+            size="xs"
+            fullWidth
+            leftSection={<TbExternalLink size={14} />}
+          >
             Buka Swagger UI
           </Button>
         </Card>
@@ -96,10 +108,20 @@ export function ApiDocsPanel() {
             <ThemeIcon size="md" variant="light" color="grape">
               <TbFileCode size={16} />
             </ThemeIcon>
-            <Text size="sm" fw={600}>OpenAPI JSON</Text>
+            <Text size="sm" fw={600}>
+              OpenAPI JSON
+            </Text>
           </Group>
-          <Text size="xs" c="dimmed" mb="md">Schema definition dalam format OpenAPI</Text>
-          <Button onClick={handleDownloadOpenApi} variant="light" size="xs" fullWidth leftSection={<TbDownload size={14} />}>
+          <Text size="xs" c="dimmed" mb="md">
+            Schema definition dalam format OpenAPI
+          </Text>
+          <Button
+            onClick={handleDownloadOpenApi}
+            variant="light"
+            size="xs"
+            fullWidth
+            leftSection={<TbDownload size={14} />}
+          >
             Download JSON
           </Button>
         </Card>
@@ -113,14 +135,45 @@ export function ApiDocsPanel() {
             onChange={(value) => setView(value as 'swagger' | 'openapi')}
             size="xs"
             data={[
-              { label: <Group gap={6}><TbBook size={14} /><span>Swagger UI</span></Group>, value: 'swagger' },
-              { label: <Group gap={6}><TbCode size={14} /><span>OpenAPI JSON</span></Group>, value: 'openapi' },
+              {
+                label: (
+                  <Group gap={6}>
+                    <TbBook size={14} />
+                    <span>Swagger UI</span>
+                  </Group>
+                ),
+                value: 'swagger',
+              },
+              {
+                label: (
+                  <Group gap={6}>
+                    <TbCode size={14} />
+                    <span>OpenAPI JSON</span>
+                  </Group>
+                ),
+                value: 'openapi',
+              },
             ]}
           />
         </Group>
         {view === 'swagger' ? (
-          <Box style={{ position: 'relative', width: '100%', height: 'calc(100vh - 400px)', minHeight: '500px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--mantine-color-default-border)' }}>
-            <iframe key={refreshKey} src={swaggerUrl} style={{ width: '100%', height: '100%', border: 'none' }} title="Swagger UI" />
+          <Box
+            style={{
+              position: 'relative',
+              width: '100%',
+              height: 'calc(100vh - 400px)',
+              minHeight: '500px',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              border: '1px solid var(--mantine-color-default-border)',
+            }}
+          >
+            <iframe
+              key={refreshKey}
+              src={swaggerUrl}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              title="Swagger UI"
+            />
           </Box>
         ) : (
           <OpenApiJsonViewer url={openApiUrl} refreshKey={refreshKey} />
@@ -132,7 +185,9 @@ export function ApiDocsPanel() {
           <ThemeIcon size="sm" variant="light" color="blue">
             <TbExternalLink size={14} />
           </ThemeIcon>
-          <Text size="sm" fw={600}>Quick Links</Text>
+          <Text size="sm" fw={600}>
+            Quick Links
+          </Text>
         </Group>
         <Stack gap="xs">
           {[
@@ -142,7 +197,9 @@ export function ApiDocsPanel() {
             <>
               {i > 0 && <Divider key={`div-${item.label}`} />}
               <Group key={item.label} justify="space-between">
-                <Text size="sm" c="dimmed">{item.label}</Text>
+                <Text size="sm" c="dimmed">
+                  {item.label}
+                </Text>
                 <Group gap="xs">
                   <CopyButton value={item.url}>
                     {({ copied, copy }) => (
@@ -153,7 +210,14 @@ export function ApiDocsPanel() {
                       </Tooltip>
                     )}
                   </CopyButton>
-                  <Button component="a" href={item.url} target="_blank" variant="subtle" size="xs" rightSection={<TbExternalLink size={12} />}>
+                  <Button
+                    component="a"
+                    href={item.url}
+                    target="_blank"
+                    variant="subtle"
+                    size="xs"
+                    rightSection={<TbExternalLink size={12} />}
+                  >
                     Open
                   </Button>
                 </Group>

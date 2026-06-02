@@ -1,8 +1,7 @@
-import { Badge, Box, Button, CopyButton, Group, Text } from '@mantine/core'
+import { Badge, Box, Button, CopyButton, Group, Text, useMantineColorScheme } from '@mantine/core'
+import Editor from '@monaco-editor/react'
 import { useEffect, useState } from 'react'
 import { TbCheck, TbCopy } from 'react-icons/tb'
-import Editor from '@monaco-editor/react'
-import { useMantineColorScheme } from '@mantine/core'
 
 export function OpenApiJsonViewer({ url, refreshKey }: { url: string; refreshKey: number }) {
   const { colorScheme } = useMantineColorScheme()

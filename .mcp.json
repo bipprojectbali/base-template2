@@ -1,25 +1,6 @@
 {
   "mcpServers": {
-    "playwright": {
-      "command": "bunx",
-      "args": ["@playwright/mcp@latest"]
-    },
-    "debug-dev": {
-      "command": "bun",
-      "args": ["run", "scripts/mcp/server.ts"],
-      "env": {
-        "MCP_SECRET": "${MCP_SECRET}"
-      }
-    },
-    "debug-stg": {
-      "command": "bun",
-      "args": ["run", "scripts/mcp/stg-server.ts"],
-      "env": {
-        "BASE_URL": "${STG_BASE_URL}",
-        "MCP_SECRET": "${STG_MCP_SECRET}"
-      }
-    },
-    "deploy-stg": {
+    "base-template-deploy-stg": {
       "command": "bun",
       "args": ["run", "scripts/mcp/deploy.ts"],
       "env": {

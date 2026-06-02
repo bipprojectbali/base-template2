@@ -1,8 +1,25 @@
-import { Alert, Badge, Box, Button, Divider, Grid, Group, List, Paper, PasswordInput, Stack, Text, TextInput, ThemeIcon, Title, useMantineColorScheme } from '@mantine/core'
+import {
+  Alert,
+  Badge,
+  Box,
+  Button,
+  Divider,
+  Grid,
+  Group,
+  List,
+  Paper,
+  PasswordInput,
+  Stack,
+  Text,
+  TextInput,
+  ThemeIcon,
+  Title,
+  useMantineColorScheme,
+} from '@mantine/core'
 import { createRoute, redirect } from '@tanstack/react-router'
 import { useState } from 'react'
 import { FcGoogle } from 'react-icons/fc'
-import { TbAlertCircle, TbCheck, TbLock, TbLogin, TbMail, TbShieldCheck, TbClock, TbUsers } from 'react-icons/tb'
+import { TbAlertCircle, TbCheck, TbClock, TbLock, TbLogin, TbMail, TbShieldCheck, TbUsers } from 'react-icons/tb'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { getDefaultRoute } from '@/frontend/hooks/useAuth'
 import { authClient } from '@/lib/auth-client'
@@ -69,7 +86,7 @@ function LoginPage() {
   }
 
   return (
-    <Box 
+    <Box
       style={{
         minHeight: '100dvh',
         display: 'flex',
@@ -77,14 +94,14 @@ function LoginPage() {
       }}
     >
       {/* Header with theme toggle */}
-      <Box 
-        px={{ base: 'md', sm: 'xl', lg: '2xl' }} 
-        py="md" 
-        style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
+      <Box
+        px={{ base: 'md', sm: 'xl', lg: '2xl' }}
+        py="md"
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          flexShrink: 0 
+          flexShrink: 0,
         }}
       >
         <Title order={3} size="h4" style={{ fontWeight: 700 }}>
@@ -102,16 +119,11 @@ function LoginPage() {
           justifyContent: 'center',
         }}
       >
-        <Grid 
-          w="100%" 
-          m={0} 
-          gutter={0}
-          style={{ maxWidth: 1400 }}
-        >
+        <Grid w="100%" m={0} gutter={0} style={{ maxWidth: 1400 }}>
           {/* Left Section - Information (Hidden on mobile) */}
-          <Grid.Col 
-            span={{ base: 12, md: 7, lg: 8 }} 
-            style={{ 
+          <Grid.Col
+            span={{ base: 12, md: 7, lg: 8 }}
+            style={{
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'center',
@@ -128,8 +140,8 @@ function LoginPage() {
                   Selamat Datang di Platform Kami
                 </Title>
                 <Text size="lg" c="dimmed" maw={600}>
-                  Solusi manajemen komprehensif untuk meningkatkan produktivitas dan kolaborasi tim Anda. 
-                  Login untuk mengakses semua fitur yang tersedia.
+                  Solusi manajemen komprehensif untuk meningkatkan produktivitas dan kolaborasi tim Anda. Login untuk
+                  mengakses semua fitur yang tersedia.
                 </Text>
               </Box>
 
@@ -139,7 +151,9 @@ function LoginPage() {
                     <TbShieldCheck size={28} />
                   </ThemeIcon>
                   <Box>
-                    <Text fw={600} size="lg" mb={4}>Keamanan Terjamin</Text>
+                    <Text fw={600} size="lg" mb={4}>
+                      Keamanan Terjamin
+                    </Text>
                     <Text c="dimmed" size="sm">
                       Data Anda dilindungi dengan enkripsi tingkat enterprise dan autentikasi multi-factor
                     </Text>
@@ -151,7 +165,9 @@ function LoginPage() {
                     <TbClock size={28} />
                   </ThemeIcon>
                   <Box>
-                    <Text fw={600} size="lg" mb={4}>Akses 24/7</Text>
+                    <Text fw={600} size="lg" mb={4}>
+                      Akses 24/7
+                    </Text>
                     <Text c="dimmed" size="sm">
                       Kelola bisnis Anda kapan saja, di mana saja dengan platform cloud kami
                     </Text>
@@ -163,7 +179,9 @@ function LoginPage() {
                     <TbUsers size={28} />
                   </ThemeIcon>
                   <Box>
-                    <Text fw={600} size="lg" mb={4}>Kolaborasi Tim</Text>
+                    <Text fw={600} size="lg" mb={4}>
+                      Kolaborasi Tim
+                    </Text>
                     <Text c="dimmed" size="sm">
                       Tingkatkan produktivitas dengan fitur kolaborasi real-time untuk seluruh tim
                     </Text>
@@ -172,10 +190,12 @@ function LoginPage() {
               </Stack>
 
               <Box mt="md">
-                <Text size="sm" fw={600} mb="sm">Demo Accounts:</Text>
-                <List 
-                  spacing="xs" 
-                  size="sm" 
+                <Text size="sm" fw={600} mb="sm">
+                  Demo Accounts:
+                </Text>
+                <List
+                  spacing="xs"
+                  size="sm"
                   c="dimmed"
                   icon={
                     <ThemeIcon size={20} radius="xl" variant="light">
@@ -184,22 +204,49 @@ function LoginPage() {
                   }
                 >
                   <List.Item>
-                    <Text component="span" inherit>Super Admin: </Text>
-                    <Text component="span" inherit fw={500}>superadmin@example.com</Text>
-                    <Text component="span" inherit> / </Text>
-                    <Text component="span" inherit fw={500}>superadmin123</Text>
+                    <Text component="span" inherit>
+                      Super Admin:{' '}
+                    </Text>
+                    <Text component="span" inherit fw={500}>
+                      superadmin@example.com
+                    </Text>
+                    <Text component="span" inherit>
+                      {' '}
+                      /{' '}
+                    </Text>
+                    <Text component="span" inherit fw={500}>
+                      superadmin123
+                    </Text>
                   </List.Item>
                   <List.Item>
-                    <Text component="span" inherit>Admin: </Text>
-                    <Text component="span" inherit fw={500}>admin@example.com</Text>
-                    <Text component="span" inherit> / </Text>
-                    <Text component="span" inherit fw={500}>admin123</Text>
+                    <Text component="span" inherit>
+                      Admin:{' '}
+                    </Text>
+                    <Text component="span" inherit fw={500}>
+                      admin@example.com
+                    </Text>
+                    <Text component="span" inherit>
+                      {' '}
+                      /{' '}
+                    </Text>
+                    <Text component="span" inherit fw={500}>
+                      admin123
+                    </Text>
                   </List.Item>
                   <List.Item>
-                    <Text component="span" inherit>User: </Text>
-                    <Text component="span" inherit fw={500}>user@example.com</Text>
-                    <Text component="span" inherit> / </Text>
-                    <Text component="span" inherit fw={500}>user123</Text>
+                    <Text component="span" inherit>
+                      User:{' '}
+                    </Text>
+                    <Text component="span" inherit fw={500}>
+                      user@example.com
+                    </Text>
+                    <Text component="span" inherit>
+                      {' '}
+                      /{' '}
+                    </Text>
+                    <Text component="span" inherit fw={500}>
+                      user123
+                    </Text>
                   </List.Item>
                 </List>
               </Box>
@@ -207,20 +254,19 @@ function LoginPage() {
           </Grid.Col>
 
           {/* Right Section - Login Form */}
-          <Grid.Col 
+          <Grid.Col
             span={{ base: 12, md: 5, lg: 4 }}
-            style={{ 
+            style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}
             p={{ base: 'md', sm: 'xl' }}
           >
-            <Paper 
-            
-              p={{ base: 'lg', sm: 'xl' }} 
-              radius="lg" 
-              w="100%" 
+            <Paper
+              p={{ base: 'lg', sm: 'xl' }}
+              radius="lg"
+              w="100%"
               maw={480}
               withBorder
               bg={colorScheme === 'dark' ? 'dark.6' : 'white'}
@@ -264,13 +310,7 @@ function LoginPage() {
                     />
                   </Stack>
 
-                  <Button 
-                    type="submit" 
-                    fullWidth 
-                    size="md" 
-                    leftSection={<TbLogin size={18} />} 
-                    loading={isLoading}
-                  >
+                  <Button type="submit" fullWidth size="md" leftSection={<TbLogin size={18} />} loading={isLoading}>
                     Masuk
                   </Button>
 
@@ -290,7 +330,9 @@ function LoginPage() {
                   {/* Mobile-only demo accounts */}
                   <Box hiddenFrom="md" mt="md">
                     <Divider mb="md" />
-                    <Text size="xs" fw={600} mb="xs">Demo Accounts:</Text>
+                    <Text size="xs" fw={600} mb="xs">
+                      Demo Accounts:
+                    </Text>
                     <Stack gap={4}>
                       <Text size="xs" c="dimmed">
                         Super Admin: <strong>superadmin@example.com</strong> / <strong>superadmin123</strong>
