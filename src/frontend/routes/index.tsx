@@ -104,7 +104,7 @@ function HomePage() {
       {/* ── Navbar ─────────────────────────────────────────────────── */}
       <Box
         component="nav"
-        px={{ base: 'md', sm: 'xl', lg: '2xl' }}
+        px={{ base: 'md', sm: 'xl' }}
         py="md"
         style={{
           display: 'flex',
@@ -121,7 +121,7 @@ function HomePage() {
         <Group gap="xs">
           <SiBun size={22} color="#fbf0df" />
           <Text fw={700} size="md" style={{ letterSpacing: '-0.02em' }}>
-            BunStack
+            Base Template
           </Text>
         </Group>
         <Group gap="sm">
@@ -322,7 +322,7 @@ function HomePage() {
             <Group gap="xs">
               <SiBun size={16} color="#fbf0df" />
               <Text size="xs" c="dimmed">
-                BunStack — Full-Stack Template
+                Base Template — Bun · Elysia · React · Prisma
               </Text>
             </Group>
             <Group gap="xs">
