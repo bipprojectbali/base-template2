@@ -1,13 +1,33 @@
 import { Box, Button, Container, Group, Stack, Text, Title } from '@mantine/core'
-import { createRoute, Link } from '@tanstack/react-router'
+import { createRoute, Link, redirect } from '@tanstack/react-router'
 import { SiBun } from 'react-icons/si'
 import { TbBrandReact, TbLogin, TbRocket } from 'react-icons/tb'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
+import { getDefaultRoute } from '@/frontend/hooks/useAuth'
+import { authClient } from '@/lib/auth-client'
 import { rootRoute } from './__root'
 
 export const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
+  beforeLoad: async ({ context }) => {
+    try {
+      const data = await context.queryClient.ensureQueryData({
+        queryKey: ['auth', 'session'],
+        queryFn: async () => {
+          const session = await authClient.getSession()
+          return session.data ? { user: session.data.user } : { user: null }
+        },
+      })
+      if (data?.user) {
+        const user = data.user as any
+        throw redirect({ to: getDefaultRoute((user.role ?? 'USER') as any) })
+      }
+    } catch (e) {
+      if (e instanceof Error) return
+      throw e
+    }
+  },
   component: HomePage,
 })
 

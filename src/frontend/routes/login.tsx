@@ -82,7 +82,7 @@ function LoginPage() {
   }
 
   const handleGoogleLogin = () => {
-    authClient.signIn.social({ provider: 'google' })
+    authClient.signIn.social({ provider: 'google', callbackURL: '/' })
   }
 
   return (
