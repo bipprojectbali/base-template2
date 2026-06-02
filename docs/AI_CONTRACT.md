@@ -19,6 +19,10 @@ mencegah perbaikan 1 bug berubah jadi 3 bug baru (bug eksponensial). AI
    flow, schema), tanya atau baca kode — jangan tebak.
 5. **Setiap perubahan harus reversible.** Diff kecil, commit jelas, bisa
    di-revert tanpa efek samping.
+6. **Context adalah sumber daya, bukan gratis.** Setiap file, log, dan
+   output tool yang masuk context menggeser ruang untuk penalaran. Baca dan
+   panggil tool secukupnya untuk paham — tidak kurang (asumsi buta), tidak
+   berlebih (context rot). Keduanya melahirkan bug.
 
 ---
 
@@ -26,7 +30,9 @@ mencegah perbaikan 1 bug berubah jadi 3 bug baru (bug eksponensial). AI
 
 Checklist wajib sebelum edit file:
 
-- [ ] Sudah baca file target (bukan cuma potongan)
+- [ ] Sudah **memahami file target sepenuhnya** (lihat §2a soal cara baca
+      yang hemat context — "memahami penuh" ≠ "menarik seluruh file mentah
+      ke context")
 - [ ] Tahu siapa yang memanggil fungsi/komponen yang akan diubah
 - [ ] Tahu apakah ada test/konsumer lain yang bergantung padanya
 - [ ] Tahu layer yang benar (route / controller / component / hook /
@@ -37,6 +43,43 @@ Checklist wajib sebelum edit file:
       semua pemakai
 
 Jika salah satu tidak jelas: **berhenti, baca lagi, atau tanya user.**
+
+---
+
+## 2a. Cara Membaca Kode (Ketetapan Hemat Context)
+
+Tujuan membaca kode adalah **paham**, bukan **menumpuk teks**. Context window
+adalah sumber daya terbatas: makin penuh dan berisik, makin turun perhatian
+model (context rot) — agen jadi lupa keputusan awal dan justru lebih mudah
+melahirkan bug baru. Jadi prinsip §1 ("minimal diff, maximal pemahaman")
+berlaku juga untuk *cara membaca*: maksimal pemahaman, minimal token.
+
+### Urutan baca yang benar (dari murah ke mahal)
+
+1. **Simbol dulu, bukan file.** Kalau tool simbolik tersedia (mis. Serena,
+   codesearch, atau tool internal yang mendukung baca per-simbol/range),
+   pakai itu: ambil signature, simbol target, dan referensinya
+   (`find_symbol`, `find_referencing_symbols`, atau setara). Inilah cara
+   memenuhi checklist §2 "tahu siapa yang memanggil" tanpa membaca semua
+   file pemanggil secara utuh.
+2. **Range, bukan seluruh file.** Kalau harus baca isi, baca rentang baris
+   yang relevan + konteks secukupnya, bukan dari baris 1 sampai akhir.
+3. **Baca utuh hanya jika:** file kecil (<300 baris) ATAU tidak ada tool
+   simbolik ATAU struktur file benar-benar perlu dilihat menyeluruh untuk
+   keputusan yang sedang diambil.
+
+### Larangan
+
+- ❌ **Membaca file utuh secara refleks** padahal cukup satu simbol/fungsi.
+- ❌ **Membaca ulang file yang isinya sudah ada di context** (cek dulu
+  sebelum re-read).
+- ❌ **Menelan file >500 baris secara utuh** tanpa alasan eksplisit —
+  kalau file sebesar itu sulit dibaca per-simbol, itu sinyal file-nya yang
+  harus dipecah (lihat §5), bukan context yang harus dikorbankan.
+
+> "Paham penuh" dicapai dengan membaca **bagian yang tepat**, bukan
+> **semua bagian**. Membaca 1.500 baris untuk mengubah 1 fungsi bukan
+> ketelitian — itu pemborosan yang menurunkan akurasi.
 
 ---
 
@@ -87,9 +130,13 @@ Jika salah satu tidak jelas: **berhenti, baca lagi, atau tanya user.**
   controller, atau komponen presentasi.
 - Jangan buat abstraksi untuk kebutuhan hipotetis. Tulis kode yang
   diminta sekarang (YAGNI — *You Aren't Gonna Need It*).
-- Hormati batas ukuran file yang sudah disepakati di project. Kalau
-  belum ada, gunakan rule of thumb: file >500 baris = sinyal untuk
-  pisah; fungsi >50 baris = sinyal untuk extract.
+- **Batas ukuran file ditegakkan, bukan sekadar disarankan.** File >500
+  baris dan fungsi >50 baris **wajib** dievaluasi untuk dipecah (lihat
+  @docs/FILE-HEALTH.md). File yang sudah melewati batas dan sering disentuh
+  AI adalah **prioritas refactor**, karena mahal dibaca berulang dan
+  menjadi sumber utama pembengkakan context. Kalau menemukan file pelanggar
+  saat bekerja, laporkan ke user sebagai kandidat pemecahan (jangan pecah
+  sendiri tanpa izin — lihat §1.3 & §8).
 - Ikuti konvensi naming, struktur folder, dan pattern yang sudah ada —
   konsistensi lebih penting dari preferensi pribadi.
 
@@ -153,6 +200,12 @@ debugger, browser automation, log inspector, DB query tool, dll) sebagai
 - **Maksimalkan pemakaian.** Kalau ada tool yang relevan, pakai — jangan
   memilih jalan manual yang lebih rapuh. Semakin sering tools dipakai
   untuk verifikasi, semakin solid project ini.
+- **Hemat output tool.** Tools adalah mata AI, tapi mata tidak perlu
+  menelan seluruh isi gudang. Pakai limit/pagination/filter pada tool yang
+  mengembalikan data besar (log, list, query, file) — ambil yang relevan,
+  bukan dump mentah. Output verbose yang tidak dibaca = context terbuang.
+  Untuk command shell yang berisik (test, build, lint), saring ke ringkasan
+  (mis. hanya kegagalan) ketimbang menarik ratusan baris lolos.
 - **Ajukan tool baru kalau perlu.** Kalau AI merasa butuh tool yang
   belum ada, AI **boleh dan didorong** untuk mengajukan pembuatannya
   ke user. Format pengajuan:

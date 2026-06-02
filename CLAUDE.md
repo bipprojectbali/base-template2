@@ -43,6 +43,51 @@ bun run db:seed         # seed demo users
 bun run db:generate     # regenerate prisma client
 ```
 
+## Migrasi Database (Wajib)
+
+Setiap kali ada perubahan pada `prisma/schema.prisma`, **wajib** lakukan dua hal berikut
+dalam commit yang sama — tidak boleh dipisah:
+
+### 1. Jalankan migrasi lokal
+
+```bash
+bun run db:migrate      # buat migration file + apply ke DB lokal
+bun run db:generate     # regenerate Prisma Client
+```
+
+Ini memastikan DB lokal sinkron dan Prisma Client up-to-date. Jangan skip meski
+perubahannya kelihatan kecil — bahkan tambah `?` (optional field) tetap butuh migrasi.
+
+### 2. Buat migration SQL untuk deploy produksi
+
+Setiap migration yang dibuat `prisma migrate dev` menghasilkan file SQL di
+`prisma/migrations/<timestamp>_<name>/migration.sql`. File ini adalah satu-satunya
+cara DB produksi/staging bisa sinkron — **pastikan file ini ikut di-commit**.
+
+Aturan menulis migration SQL yang aman untuk deploy:
+
+- Pakai `IF NOT EXISTS` / `IF EXISTS` — idempoten, aman di-rerun.
+- Kolom NOT NULL di tabel yang sudah berisi data: **wajib** kasih `DEFAULT`
+  atau jalankan `UPDATE` backfill sebelum set NOT NULL. Jangan asumsikan tabel kosong.
+- Jangan hapus kolom/tabel kecuali sudah dipastikan tidak ada kode yang masih membacanya.
+- Untuk rename kolom: buat kolom baru + backfill + hapus kolom lama dalam 2 deployment
+  terpisah (blue-green safe), bukan satu ALTER RENAME langsung.
+
+### Checklist sebelum commit perubahan schema
+
+- [ ] `bun run db:migrate` berhasil (migration file terbuat di `prisma/migrations/`)
+- [ ] `bun run db:generate` berhasil (Prisma Client terupdate)
+- [ ] `bun run typecheck` hijau (tidak ada type error akibat field baru/hilang)
+- [ ] File `prisma/migrations/<timestamp>_*/migration.sql` ikut di-commit
+- [ ] Tidak ada `findMany` / query baru yang mengakses field tanpa migration-nya
+
+### Kenapa ini wajib
+
+Schema drift adalah penyebab paling umum crash di prod/staging:
+`column does not exist`, `relation does not exist`, `null constraint violation`.
+Prisma Client di-generate dari schema, tapi DB tidak berubah otomatis.
+Migration adalah satu-satunya jembatan — kalau tertinggal, app jalan tapi query meledak.
+
 ## Project Structure
 
 ```

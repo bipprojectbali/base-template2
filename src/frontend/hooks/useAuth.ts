@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { authClient } from '@/lib/auth-client'
 
@@ -10,6 +10,7 @@ export interface User {
   email: string
   role: Role
   blocked: boolean
+  image?: string | null
 }
 
 type SessionUser = {
@@ -18,6 +19,7 @@ type SessionUser = {
   email: string
   role?: string
   blocked?: boolean
+  image?: string | null
   [key: string]: unknown
 }
 
@@ -47,6 +49,7 @@ export function useSession() {
             email: user.email,
             role: (user.role as Role) ?? 'USER',
             blocked: (user.blocked as boolean) ?? false,
+            image: user.image ?? null,
           } satisfies User,
         }
       : null,
@@ -82,12 +85,14 @@ export function useLogin() {
 
 export function useLogout() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async () => {
-      await authClient.signOut()
+    mutationFn: () => authClient.signOut(),
+    onSuccess: () => {
+      queryClient.setQueryData(['auth', 'session'], null)
+      queryClient.invalidateQueries({ queryKey: ['auth'] })
       navigate({ to: '/login' })
-      return { ok: true }
     },
   })
 }

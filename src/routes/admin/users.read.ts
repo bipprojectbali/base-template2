@@ -12,7 +12,7 @@ export const adminUsersReadRouter = new Elysia({ tags: ['Admin — Users'] })
       const guard = guardSuperAdmin(authUser)
       if (guard) return guard
       const users = await prisma.user.findMany({
-        select: { id: true, name: true, email: true, role: true, blocked: true, createdAt: true },
+        select: { id: true, name: true, email: true, role: true, blocked: true, createdAt: true, image: true },
         orderBy: { createdAt: 'asc' },
         take: 500,
       })

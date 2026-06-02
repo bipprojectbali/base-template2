@@ -1,7 +1,6 @@
 import {
   ActionIcon,
   AppShell,
-  Avatar,
   Badge,
   Box,
   Burger,
@@ -70,6 +69,7 @@ import {
   TbUsers,
   TbWifi,
 } from 'react-icons/tb'
+import { ApiDocsPanel } from '@/frontend/components/dev/ApiDocsPanel'
 import { AppLogsPanel } from '@/frontend/components/dev/AppLogsPanel'
 import { DatabasePanel } from '@/frontend/components/dev/DatabasePanel'
 import { FileHealthPanel } from '@/frontend/components/dev/FileHealthPanel'
@@ -78,10 +78,10 @@ import { PlaceholderPanel } from '@/frontend/components/dev/PlaceholderPanel'
 import { ProjectPanel } from '@/frontend/components/dev/ProjectPanel'
 import { UserLogsPanel } from '@/frontend/components/dev/UserLogsPanel'
 import { UsersPanel } from '@/frontend/components/dev/UsersPanel'
-import { ApiDocsPanel } from '@/frontend/components/dev/ApiDocsPanel'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { TicketsPanel } from '@/frontend/components/TicketsPanel'
-import { type Role, useLogout, useSession } from '@/frontend/hooks/useAuth'
+import { UserAvatar } from '@/frontend/components/UserAvatar'
+import { useLogout, useSession } from '@/frontend/hooks/useAuth'
 import { usePresence } from '@/frontend/hooks/usePresence'
 import { apiFetch } from '@/frontend/lib/apiFetch'
 import { authClient } from '@/lib/auth-client'
@@ -126,15 +126,6 @@ export const devRoute = createRoute({
   },
   component: DevPage,
 })
-
-interface AdminUser {
-  id: string
-  name: string
-  email: string
-  role: Role
-  blocked: boolean
-  createdAt: string
-}
 
 const navItems = [
   { label: 'Overview', icon: TbLayoutDashboard, key: 'overview' },
@@ -296,9 +287,7 @@ function DevPage() {
             {collapsed ? (
               <Stack align="center" gap={4}>
                 <Tooltip label={user?.name} position="right">
-                  <Avatar color="red" radius="xl" size="sm">
-                    {user?.name?.charAt(0).toUpperCase()}
-                  </Avatar>
+                  <UserAvatar user={user} color="red" size="sm" />
                 </Tooltip>
                 <ThemeToggle size="sm" />
                 <Tooltip label="Logout" position="right">
@@ -310,9 +299,7 @@ function DevPage() {
             ) : (
               <Group justify="space-between">
                 <Group gap="xs">
-                  <Avatar color="red" radius="xl" size="sm">
-                    {user?.name?.charAt(0).toUpperCase()}
-                  </Avatar>
+                  <UserAvatar user={user} color="red" size="sm" />
                   <div>
                     <Text size="xs" fw={500}>
                       {user?.name}

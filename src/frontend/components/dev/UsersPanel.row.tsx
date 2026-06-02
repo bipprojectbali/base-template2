@@ -1,5 +1,6 @@
-import { ActionIcon, Avatar, Badge, Group, Menu, Table, Text } from '@mantine/core'
+import { ActionIcon, Badge, Group, Menu, Table, Text } from '@mantine/core'
 import { TbBug, TbCircleFilled, TbDots, TbLock, TbLockOpen, TbShieldCheck, TbShieldOff } from 'react-icons/tb'
+import { UserAvatar } from '@/frontend/components/UserAvatar'
 import { type AdminUser, roleBadge } from './shared'
 
 interface UserRowProps {
@@ -18,9 +19,7 @@ export function UserRow({ u, isSelf, isOnline, onChangeRole, onToggleBlock }: Us
       <Table.Td>
         <Group gap="sm">
           <div style={{ position: 'relative' }}>
-            <Avatar color={badge.color} radius="xl" size="sm">
-              {u.name.charAt(0).toUpperCase()}
-            </Avatar>
+            <UserAvatar user={u} color={badge.color} size="sm" />
             {!u.blocked && (
               <TbCircleFilled
                 size={10}

@@ -1,8 +1,9 @@
-import { Avatar, Badge, Button, Container, Divider, Group, Paper, Stack, Text, Title } from '@mantine/core'
+import { Badge, Button, Container, Divider, Group, Paper, Stack, Text, Title } from '@mantine/core'
 import { modals } from '@mantine/modals'
 import { createRoute, Link, redirect } from '@tanstack/react-router'
 import { TbLogout, TbUser } from 'react-icons/tb'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
+import { UserAvatar } from '@/frontend/components/UserAvatar'
 import { useLogout, useSession } from '@/frontend/hooks/useAuth'
 import { authClient } from '@/lib/auth-client'
 import { rootRoute } from './__root'
@@ -86,9 +87,7 @@ function ProfilePage() {
         {/* Avatar card */}
         <Paper withBorder p={{ base: 'lg', sm: 'xl' }} radius="md">
           <Stack align="center" gap="md">
-            <Avatar color="blue" radius="xl" size={64}>
-              {user?.name?.charAt(0).toUpperCase()}
-            </Avatar>
+            <UserAvatar user={user} color="blue" size={80} />
             <div style={{ textAlign: 'center' }}>
               <Text fw={600} size="lg">
                 {user?.name}

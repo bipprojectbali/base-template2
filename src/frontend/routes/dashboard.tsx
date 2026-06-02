@@ -1,7 +1,6 @@
 import {
   ActionIcon,
   AppShell,
-  Avatar,
   Badge,
   Box,
   Burger,
@@ -34,6 +33,7 @@ import {
 } from 'react-icons/tb'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { TicketsPanel } from '@/frontend/components/TicketsPanel'
+import { UserAvatar } from '@/frontend/components/UserAvatar'
 import { useLogout, useSession } from '@/frontend/hooks/useAuth'
 import { authClient } from '@/lib/auth-client'
 import { rootRoute } from './__root'
@@ -263,9 +263,7 @@ function DashboardPage() {
             {collapsed ? (
               <Stack align="center" gap={4}>
                 <Tooltip label={user?.name} position="right">
-                  <Avatar color={user?.role === 'SUPER_ADMIN' ? 'red' : 'violet'} radius="xl" size="sm">
-                    {user?.name?.charAt(0).toUpperCase()}
-                  </Avatar>
+                  <UserAvatar user={user} color={user?.role === 'SUPER_ADMIN' ? 'red' : 'violet'} size="sm" />
                 </Tooltip>
                 <ThemeToggle size="sm" />
                 <Tooltip label="Profile" position="right">
@@ -282,9 +280,7 @@ function DashboardPage() {
             ) : (
               <Group justify="space-between">
                 <Group gap="xs">
-                  <Avatar color={user?.role === 'SUPER_ADMIN' ? 'red' : 'violet'} radius="xl" size="sm">
-                    {user?.name?.charAt(0).toUpperCase()}
-                  </Avatar>
+                  <UserAvatar user={user} color={user?.role === 'SUPER_ADMIN' ? 'red' : 'violet'} size="sm" />
                   <div>
                     <Text size="xs" fw={500}>
                       {user?.name}
