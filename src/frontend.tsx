@@ -2,6 +2,19 @@ import type { ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './frontend/App'
 
+// Stale chunk handler: setelah deploy, browser mungkin masih cache chunk lama
+// dengan immutable headers yang merujuk hash berbeda → 404 saat lazy import.
+// Vite fires 'vite:preloadError' untuk kasus ini. Reload sekali otomatis
+// agar browser ambil index.html + chunk baru. sessionStorage mencegah loop.
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault()
+  const RELOAD_KEY = '_vite_reload'
+  if (!sessionStorage.getItem(RELOAD_KEY)) {
+    sessionStorage.setItem(RELOAD_KEY, '1')
+    window.location.reload()
+  }
+})
+
 // DevInspector hanya di-import saat dev (tree-shaken di production)
 const InspectorWrapper = import.meta.env?.DEV
   ? (await import('./frontend/DevInspector')).DevInspector
