@@ -7,6 +7,8 @@ const N         = 80
 const BOX       = [10, 5.5, 3.5] as const
 const THRESH_SQ = 3.2 * 3.2
 
+const BG_COLOR  = '#0d1117'   // dark backdrop — matches canvas background
+
 // ── Particle network ──────────────────────────────────────────────────
 function ParticleNetwork() {
   const { camera } = useThree()
@@ -40,11 +42,11 @@ function ParticleNetwork() {
   }, [])
 
   const ptObj = useMemo(() => new THREE.Points(ptGeo,
-    new THREE.PointsMaterial({ color: '#4f8ef7', size: 0.06, sizeAttenuation: true, transparent: true, opacity: 0.7 })
+    new THREE.PointsMaterial({ color: '#4f8ef7', size: 0.06, sizeAttenuation: true, transparent: true, opacity: 0.75 })
   ), [ptGeo])
 
   const lnObj = useMemo(() => new THREE.LineSegments(lnGeo,
-    new THREE.LineBasicMaterial({ color: '#3b82f6', transparent: true, opacity: 0.18 })
+    new THREE.LineBasicMaterial({ color: '#3b82f6', transparent: true, opacity: 0.2 })
   ), [lnGeo])
 
   useEffect(() => {
@@ -57,12 +59,10 @@ function ParticleNetwork() {
   }, [])
 
   useFrame(() => {
-    // Camera parallax
     camera.position.x += (mouse.current.x * 1.4 - camera.position.x) * 0.03
     camera.position.y += (mouse.current.y * 0.7 - camera.position.y) * 0.03
     camera.lookAt(0, 0, 0)
 
-    // Drift particles
     const ptAttr = ptGeo.attributes.position as THREE.BufferAttribute
     for (let i = 0; i < N; i++) {
       const p = particles[i]
@@ -74,7 +74,6 @@ function ParticleNetwork() {
     }
     ptAttr.needsUpdate = true
 
-    // Update connections
     const lnAttr = lnGeo.attributes.position as THREE.BufferAttribute
     let vi = 0
     for (let i = 0; i < N; i++) {
@@ -100,38 +99,36 @@ function ParticleNetwork() {
   )
 }
 
-// ── Public export ─────────────────────────────────────────────────────
-// Renders a fixed full-screen canvas at z-index:-1 with its own solid
-// background. Overrides body/html background to transparent while mounted
-// so the canvas is visible as the page background.
-export function Background3D() {
-  useEffect(() => {
-    // Save current inline background values
-    const bodyBg = document.body.style.backgroundColor
-    const htmlBg = document.documentElement.style.backgroundColor
-
-    // Make html+body transparent so the canvas shows through
-    document.body.style.backgroundColor = 'transparent'
-    document.documentElement.style.backgroundColor = 'transparent'
-
-    return () => {
-      document.body.style.backgroundColor = bodyBg
-      document.documentElement.style.backgroundColor = htmlBg
-    }
-  }, [])
-
+// ── Exported wrapper ──────────────────────────────────────────────────
+// Usage — wrap your page content with this component:
+//
+//   <Background3D>
+//     <YourPageContent />
+//   </Background3D>
+//
+// The canvas sits behind the children via CSS grid overlap.
+export function Background3D({ children }: { children: React.ReactNode }) {
   return (
-    <Canvas
-      style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }}
-      camera={{ position: [0, 0, 8], fov: 60 }}
-      gl={{ antialias: true, alpha: false }}
-      dpr={Math.min(window.devicePixelRatio, 1.5)}
-    >
-      {/* Solid dark background — becomes the page background */}
-      <color attach="background" args={['#0d1117']} />
-      <Suspense fallback={null}>
-        <ParticleNetwork />
-      </Suspense>
-    </Canvas>
+    <div style={{ position: 'relative', minHeight: '100dvh', background: BG_COLOR }}>
+      {/* Canvas layer — absolute, fills the wrapper */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+        <Canvas
+          style={{ width: '100%', height: '100%' }}
+          camera={{ position: [0, 0, 8], fov: 60 }}
+          gl={{ antialias: true, alpha: false }}
+          dpr={Math.min(window.devicePixelRatio, 1.5)}
+        >
+          <color attach="background" args={[BG_COLOR]} />
+          <Suspense fallback={null}>
+            <ParticleNetwork />
+          </Suspense>
+        </Canvas>
+      </div>
+
+      {/* Content layer — on top of canvas */}
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        {children}
+      </div>
+    </div>
   )
 }

@@ -45,8 +45,7 @@ function ProfilePage() {
   const user = data?.user
 
   return (
-    <>
-      <Background3D />
+    <Background3D>
       <Container size="sm" px={{ base: 'md', sm: 'lg' }} py={{ base: 'md', sm: 'xl' }}>
       <Stack gap="md">
         {/* Header row — stacks on very small screens */}
@@ -133,6 +132,6 @@ function ProfilePage() {
         </Paper>
       </Stack>
     </Container>
-    </>
+    </Background3D>
   )
 }

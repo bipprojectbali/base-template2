@@ -16,8 +16,7 @@ function BlockedPage() {
   const logout = useLogout()
 
   return (
-    <>
-      <Background3D />
+    <Background3D>
     <Box style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       {/* Header with theme toggle */}
       <Box px={{ base: 'md', sm: 'xl' }} py="sm" style={{ display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
@@ -82,6 +81,6 @@ function BlockedPage() {
         </Paper>
       </Box>
     </Box>
-    </>
+    </Background3D>
   )
 }

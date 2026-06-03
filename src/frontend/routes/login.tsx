@@ -87,8 +87,7 @@ function LoginPage() {
   }
 
   return (
-    <>
-      <Background3D />
+    <Background3D>
     <Box
       style={{
         minHeight: '100dvh',
@@ -355,6 +354,6 @@ function LoginPage() {
         </Grid>
       </Box>
     </Box>
-    </>
+    </Background3D>
   )
 }
