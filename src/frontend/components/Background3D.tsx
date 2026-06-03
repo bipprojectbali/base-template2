@@ -1,5 +1,5 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Suspense, useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 
 // ── Config ────────────────────────────────────────────────────────────
@@ -116,12 +116,10 @@ export function Background3D({ children }: { children: React.ReactNode }) {
           style={{ width: '100%', height: '100%' }}
           camera={{ position: [0, 0, 8], fov: 60 }}
           gl={{ antialias: true, alpha: false }}
-          dpr={Math.min(window.devicePixelRatio, 1.5)}
+          dpr={[1, 1.5]}
         >
           <color attach="background" args={[BG_COLOR]} />
-          <Suspense fallback={null}>
-            <ParticleNetwork />
-          </Suspense>
+          <ParticleNetwork />
         </Canvas>
       </div>
 

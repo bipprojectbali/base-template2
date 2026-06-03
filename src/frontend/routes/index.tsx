@@ -167,8 +167,8 @@ function HomePage() {
     <div style={{ background: '#09090f', minHeight: '100dvh', fontFamily: 'system-ui, sans-serif' }}>
       {/* ── Hero: full-viewport D3 network ─────────────────── */}
       <section style={{ height: '100dvh', position: 'relative', overflow: 'hidden' }}>
-        {/* 3D scene layer */}
-        <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+        {/* 3D scene layer — explicit width+height agar R3F Canvas dapat dimensi */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0, width: '100%', height: '100%' }}>
           <Scene3D />
         </div>
 
