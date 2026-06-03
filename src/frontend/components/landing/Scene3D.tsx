@@ -1,181 +1,177 @@
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import * as THREE from 'three'
+import { useEffect, useRef } from 'react'
 
 // ── Orbit config ──────────────────────────────────────────────────────
 const ORBITERS = [
-  { label: 'Bun',        color: '#f5d5aa', r: 3.0, spd: 0.32, phi0: 0,    tilt: 0.12  },
-  { label: 'Elysia',     color: '#5bc8fb', r: 2.6, spd: 0.52, phi0: 0.78, tilt: -0.28 },
-  { label: 'React',      color: '#61dafb', r: 3.3, spd: 0.42, phi0: 1.57, tilt: 0.38  },
-  { label: 'Vite',       color: '#a855f7', r: 2.5, spd: 0.68, phi0: 2.35, tilt: -0.48 },
-  { label: 'Prisma',     color: '#6366f1', r: 3.5, spd: 0.28, phi0: 3.14, tilt: 0.22  },
-  { label: 'PG',         color: '#3d7ee8', r: 2.8, spd: 0.48, phi0: 3.93, tilt: -0.15 },
-  { label: 'Redis',      color: '#ff4438', r: 3.1, spd: 0.38, phi0: 4.71, tilt: 0.55  },
-  { label: 'Auth',       color: '#22c55e', r: 2.7, spd: 0.58, phi0: 5.50, tilt: -0.42 },
+  { label: 'Bun',    color: '#f5d5aa', r: 175, spd: 0.32, phi0: 0,    tilt: 0.15  },
+  { label: 'Elysia', color: '#5bc8fb', r: 150, spd: 0.52, phi0: 0.78, tilt: -0.28 },
+  { label: 'React',  color: '#61dafb', r: 200, spd: 0.42, phi0: 1.57, tilt: 0.38  },
+  { label: 'Vite',   color: '#a855f7', r: 140, spd: 0.68, phi0: 2.35, tilt: -0.48 },
+  { label: 'Prisma', color: '#6366f1', r: 215, spd: 0.28, phi0: 3.14, tilt: 0.22  },
+  { label: 'PG',     color: '#3d7ee8', r: 162, spd: 0.48, phi0: 3.93, tilt: -0.15 },
+  { label: 'Redis',  color: '#ff4438', r: 190, spd: 0.38, phi0: 4.71, tilt: 0.55  },
+  { label: 'Auth',   color: '#22c55e', r: 158, spd: 0.58, phi0: 5.50, tilt: -0.42 },
 ]
 
-// ── Star field (pure Three.js Points — no drei, no async) ─────────────
-function StarField() {
-  const obj = useMemo(() => {
-    const n   = 3000
-    const pos = new Float32Array(n * 3)
-    for (let i = 0; i < n; i++) {
-      const theta = Math.random() * Math.PI * 2
-      const phi   = Math.acos(2 * Math.random() - 1)
-      const r     = 40 + Math.random() * 40
-      pos[i * 3]     = r * Math.sin(phi) * Math.cos(theta)
-      pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta)
-      pos[i * 3 + 2] = r * Math.cos(phi)
-    }
-    const geo = new THREE.BufferGeometry()
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
-    const mat = new THREE.PointsMaterial({ color: '#ffffff', size: 0.12, sizeAttenuation: true, transparent: true, opacity: 0.7 })
-    return new THREE.Points(geo, mat)
-  }, [])
+const FOV = 380
 
-  return <primitive object={obj} />
+function hex2rgb(hex: string) {
+  return `${parseInt(hex.slice(1,3),16)},${parseInt(hex.slice(3,5),16)},${parseInt(hex.slice(5,7),16)}`
 }
 
-// ── Center glowing sphere (standard material, no external shaders) ─────
-function CenterSphere() {
-  const meshRef  = useRef<THREE.Mesh>(null!)
-  const glowRef  = useRef<THREE.Mesh>(null!)
-
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime()
-    meshRef.current.rotation.y = t * 0.3
-    meshRef.current.rotation.x = Math.sin(t * 0.2) * 0.2
-    // subtle scale pulse
-    const s = 1 + Math.sin(t * 1.5) * 0.04
-    meshRef.current.scale.setScalar(s)
-    glowRef.current.scale.setScalar(s * 1.3)
-  })
-
-  return (
-    <group>
-      <mesh ref={meshRef}>
-        <sphereGeometry args={[0.85, 32, 32]} />
-        <meshStandardMaterial color="#1e40af" emissive="#1d4ed8" emissiveIntensity={0.8} roughness={0.2} metalness={0.5} />
-      </mesh>
-      <mesh ref={glowRef}>
-        <sphereGeometry args={[0.85, 16, 16]} />
-        <meshStandardMaterial color="#3b82f6" transparent opacity={0.07} side={THREE.BackSide} />
-      </mesh>
-    </group>
-  )
+function rotate(x: number, y: number, z: number, camX: number, camY: number) {
+  const cY = Math.cos(camY), sY = Math.sin(camY)
+  const x1 = x*cY - z*sY, z1 = x*sY + z*cY
+  const cX = Math.cos(camX), sX = Math.sin(camX)
+  return { x: x1, y: y*cX - z1*sX, z: y*sX + z1*cX }
 }
 
-// ── Orbit ring ────────────────────────────────────────────────────────
-function OrbitRing({ r, tilt }: { r: number; tilt: number }) {
-  const obj = useMemo(() => {
-    const pts: THREE.Vector3[] = []
-    for (let i = 0; i <= 80; i++) {
-      const a = (i / 80) * Math.PI * 2
-      pts.push(new THREE.Vector3(Math.cos(a) * r * Math.cos(tilt), Math.sin(tilt) * r, Math.sin(a) * r * Math.cos(tilt)))
-    }
-    const geo = new THREE.BufferGeometry().setFromPoints(pts)
-    return new THREE.Line(geo, new THREE.LineBasicMaterial({ color: '#1e3a5f', transparent: true, opacity: 0.4 }))
-  }, [r, tilt])
-  return <primitive object={obj} />
+function proj(x: number, y: number, z: number, cx: number, cy: number) {
+  const s = FOV / (FOV + z)
+  return { sx: x*s + cx, sy: y*s + cy, scale: s }
 }
 
-// ── Connection lines ──────────────────────────────────────────────────
-function ConnectionLines() {
-  const lines = useMemo(() => ORBITERS.map(o => {
-    const geo = new THREE.BufferGeometry()
-    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3))
-    return new THREE.Line(geo, new THREE.LineBasicMaterial({ color: o.color, transparent: true, opacity: 0.18 }))
-  }), [])
-
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime()
-    ORBITERS.forEach((o, i) => {
-      const phi = o.phi0 + t * o.spd
-      const attr = lines[i].geometry.attributes.position as THREE.BufferAttribute
-      attr.setXYZ(1, Math.cos(phi) * o.r * Math.cos(o.tilt), Math.sin(o.tilt) * o.r, Math.sin(phi) * o.r * Math.cos(o.tilt))
-      attr.needsUpdate = true
-    })
-  })
-
-  return <>{lines.map((l, i) => <primitive key={i} object={l} />)}</>
-}
-
-// ── Orbiting node ─────────────────────────────────────────────────────
-type OrbiterProps = typeof ORBITERS[0]
-
-function Orbiter({ color, r, spd, phi0, tilt }: OrbiterProps) {
-  const groupRef = useRef<THREE.Group>(null!)
-  const meshRef  = useRef<THREE.Mesh>(null!)
-  const [hov, setHov] = useState(false)
-  const { gl } = useThree()
-  const sv = useMemo(() => new THREE.Vector3(1, 1, 1), [])
-
-  useFrame(({ clock }) => {
-    const phi = phi0 + clock.getElapsedTime() * spd
-    groupRef.current.position.set(
-      Math.cos(phi) * r * Math.cos(tilt),
-      Math.sin(tilt) * r,
-      Math.sin(phi) * r * Math.cos(tilt),
-    )
-    sv.setScalar(hov ? 1.5 : 1)
-    meshRef.current.scale.lerp(sv, 0.12)
-  })
-
-  return (
-    <group ref={groupRef}>
-      <mesh ref={meshRef}
-        onPointerEnter={() => { setHov(true);  gl.domElement.style.cursor = 'pointer' }}
-        onPointerLeave={() => { setHov(false); gl.domElement.style.cursor = 'default'  }}
-      >
-        <sphereGeometry args={[0.22, 16, 16]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={hov ? 1.2 : 0.5} roughness={0.2} metalness={0.4} />
-      </mesh>
-    </group>
-  )
-}
-
-// ── Camera parallax ───────────────────────────────────────────────────
-function CameraRig() {
-  const { camera } = useThree()
-  const mouse = useRef({ x: 0, y: 0 })
-  useEffect(() => {
-    const fn = (e: MouseEvent) => {
-      mouse.current.x = (e.clientX / window.innerWidth  - 0.5) * 2
-      mouse.current.y = -(e.clientY / window.innerHeight - 0.5) * 2
-    }
-    window.addEventListener('mousemove', fn)
-    return () => window.removeEventListener('mousemove', fn)
-  }, [])
-  useFrame(() => {
-    camera.position.x += (mouse.current.x * 1.8 - camera.position.x) * 0.04
-    camera.position.y += (mouse.current.y * 0.9 - camera.position.y) * 0.04
-    camera.lookAt(0, 0, 0)
-  })
-  return null
-}
-
-// ── Public export — NO Suspense, NO drei, pure R3F ────────────────────
+// ── Canvas 2D — zero external dependencies ────────────────────────────
 export function Scene3D() {
-  return (
-    <Canvas
-      style={{ width: '100%', height: '100%' }}
-      camera={{ position: [0, 0, 7.5], fov: 52 }}
-      gl={{ antialias: true, alpha: false }}
-      dpr={[1, 2]}
-    >
-      <color attach="background" args={['#09090f']} />
+  const ref = useRef<HTMLCanvasElement>(null)
 
-      <ambientLight intensity={0.3} />
-      <pointLight position={[4, 6, 4]}   color="#60a5fa" intensity={50} distance={18} />
-      <pointLight position={[-4, -4, 2]}  color="#818cf8" intensity={25} distance={14} />
-      <pointLight position={[0, 0, 3]}   color="#ffffff"  intensity={10} distance={8}  />
+  useEffect(() => {
+    const canvas = ref.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
 
-      <StarField />
-      <CenterSphere />
-      {ORBITERS.map(o => <OrbitRing key={o.label} r={o.r} tilt={o.tilt} />)}
-      <ConnectionLines />
-      {ORBITERS.map(o => <Orbiter key={o.label} {...o} />)}
-      <CameraRig />
-    </Canvas>
-  )
+    let raf: number
+    let camX = 0, camY = 0, tCamX = 0, tCamY = 0
+
+    const resize = () => {
+      const dpr = Math.min(devicePixelRatio, 2)
+      canvas.width  = canvas.offsetWidth  * dpr
+      canvas.height = canvas.offsetHeight * dpr
+    }
+    const ro = new ResizeObserver(resize)
+    ro.observe(canvas)
+    resize()
+
+    const onMouse = (e: MouseEvent) => {
+      tCamY =  (e.clientX / innerWidth  - 0.5) * 0.7
+      tCamX = -(e.clientY / innerHeight - 0.5) * 0.45
+    }
+    window.addEventListener('mousemove', onMouse)
+
+    // Stars
+    const STARS = Array.from({ length: 280 }, () => ({
+      x: (Math.random() - 0.5) * 2200,
+      y: (Math.random() - 0.5) * 2200,
+      z: Math.random() * 600 + 100,
+      s: Math.random() * 1.4 + 0.4,
+    }))
+
+    let t = 0
+    const draw = () => {
+      t += 0.016
+      camX += (tCamX - camX) * 0.04
+      camY += (tCamY - camY) * 0.04
+
+      const W = canvas.width, H = canvas.height
+      const cx = W / 2, cy = H / 2
+      const dpr = Math.min(devicePixelRatio, 2)
+
+      // Background
+      ctx.fillStyle = '#09090f'
+      ctx.fillRect(0, 0, W, H)
+
+      // Stars
+      STARS.forEach(st => {
+        const r = rotate(st.x, st.y, st.z, camX, camY)
+        if (r.z > -FOV + 50) {
+          const p = proj(r.x, r.y, r.z, cx, cy)
+          const alpha = Math.min(0.9, (r.z + 700) / 900) * 0.7
+          ctx.beginPath()
+          ctx.arc(p.sx, p.sy, Math.max(0.5, st.s * p.scale * dpr), 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(255,255,255,${alpha.toFixed(2)})`
+          ctx.fill()
+        }
+      })
+
+      // Orbiter 3D positions
+      const ops = ORBITERS.map(o => {
+        const phi = o.phi0 + t * o.spd
+        const ox = Math.cos(phi) * o.r * Math.cos(o.tilt)
+        const oy = Math.sin(o.tilt) * o.r
+        const oz = Math.sin(phi) * o.r * Math.cos(o.tilt)
+        const rv = rotate(ox, oy, oz, camX, camY)
+        const p  = proj(rv.x, rv.y, rv.z, cx, cy)
+        return { ...o, ...p, rz: rv.z }
+      })
+
+      // Orbit rings
+      ORBITERS.forEach(o => {
+        ctx.beginPath()
+        for (let i = 0; i <= 72; i++) {
+          const a = (i / 72) * Math.PI * 2
+          const rv = rotate(Math.cos(a)*o.r*Math.cos(o.tilt), Math.sin(o.tilt)*o.r, Math.sin(a)*o.r*Math.cos(o.tilt), camX, camY)
+          const p  = proj(rv.x, rv.y, rv.z, cx, cy)
+          i === 0 ? ctx.moveTo(p.sx, p.sy) : ctx.lineTo(p.sx, p.sy)
+        }
+        ctx.closePath()
+        ctx.strokeStyle = 'rgba(30,58,100,0.45)'
+        ctx.lineWidth = 1
+        ctx.stroke()
+      })
+
+      // Center projected
+      const cP = proj(0, 0, 0, cx, cy)
+
+      // Connection lines
+      ops.forEach(op => {
+        ctx.beginPath()
+        ctx.moveTo(cP.sx, cP.sy)
+        ctx.lineTo(op.sx, op.sy)
+        const a = Math.max(0.05, 0.22 - op.rz / 2000)
+        ctx.strokeStyle = `rgba(${hex2rgb(op.color)},${a.toFixed(2)})`
+        ctx.lineWidth = 1
+        ctx.stroke()
+      })
+
+      // Center sphere glow
+      const pulse = 1 + Math.sin(t * 1.6) * 0.04
+      const CR = 40 * dpr * pulse
+      const gC = ctx.createRadialGradient(cP.sx, cP.sy, 0, cP.sx, cP.sy, CR * 2.5)
+      gC.addColorStop(0, 'rgba(79,142,247,0.85)')
+      gC.addColorStop(0.5, 'rgba(29,78,216,0.35)')
+      gC.addColorStop(1, 'rgba(29,78,216,0)')
+      ctx.beginPath(); ctx.arc(cP.sx, cP.sy, CR * 2.5, 0, Math.PI*2)
+      ctx.fillStyle = gC; ctx.fill()
+      ctx.beginPath(); ctx.arc(cP.sx, cP.sy, CR, 0, Math.PI*2)
+      ctx.fillStyle = '#1e40af'; ctx.fill()
+
+      // Orbiters — depth sorted
+      ops.sort((a, b) => b.rz - a.rz).forEach(op => {
+        const R  = Math.max(5, 14 * op.scale * dpr)
+        const rgb = hex2rgb(op.color)
+        // Glow
+        const gO = ctx.createRadialGradient(op.sx, op.sy, 0, op.sx, op.sy, R * 3)
+        gO.addColorStop(0, `rgba(${rgb},0.45)`)
+        gO.addColorStop(1, `rgba(${rgb},0)`)
+        ctx.beginPath(); ctx.arc(op.sx, op.sy, R*3, 0, Math.PI*2)
+        ctx.fillStyle = gO; ctx.fill()
+        // Body
+        ctx.beginPath(); ctx.arc(op.sx, op.sy, R, 0, Math.PI*2)
+        ctx.fillStyle = op.color; ctx.fill()
+        // Label
+        const fs = Math.round(Math.max(9, 11 * op.scale) * dpr)
+        ctx.font = `600 ${fs}px system-ui,sans-serif`
+        ctx.fillStyle = `rgba(${rgb},0.9)`
+        ctx.textAlign = 'center'
+        ctx.fillText(op.label, op.sx, op.sy - R - 4*dpr)
+      })
+
+      raf = requestAnimationFrame(draw)
+    }
+    raf = requestAnimationFrame(draw)
+
+    return () => { cancelAnimationFrame(raf); ro.disconnect(); window.removeEventListener('mousemove', onMouse) }
+  }, [])
+
+  return <canvas ref={ref} style={{ width: '100%', height: '100%', display: 'block' }} />
 }

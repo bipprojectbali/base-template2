@@ -1,129 +1,115 @@
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useMemo, useRef } from 'react'
-import * as THREE from 'three'
+import { useEffect, useRef } from 'react'
 
-// ── Config ────────────────────────────────────────────────────────────
-const N         = 80
-const BOX       = [10, 5.5, 3.5] as const
-const THRESH_SQ = 3.2 * 3.2
+const N         = 75
+const BOX       = [9, 5, 3] as const
+const THRESH_SQ = 3 * 3
+const BG        = '#0d1117'
 
-const BG_COLOR  = '#0d1117'   // dark backdrop — matches canvas background
-
-// ── Particle network ──────────────────────────────────────────────────
-function ParticleNetwork() {
-  const { camera } = useThree()
-  const mouse = useRef({ x: 0, y: 0 })
-
-  const particles = useMemo(() =>
-    Array.from({ length: N }, () => ({
-      pos: new THREE.Vector3(
-        (Math.random() - 0.5) * BOX[0] * 2,
-        (Math.random() - 0.5) * BOX[1] * 2,
-        (Math.random() - 0.5) * BOX[2] * 2,
-      ),
-      vel: new THREE.Vector3(
-        (Math.random() - 0.5) * 0.004,
-        (Math.random() - 0.5) * 0.004,
-        (Math.random() - 0.5) * 0.002,
-      ),
-    }))
-  , [])
-
-  const ptGeo = useMemo(() => {
-    const g = new THREE.BufferGeometry()
-    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3))
-    return g
-  }, [])
-
-  const lnGeo = useMemo(() => {
-    const g = new THREE.BufferGeometry()
-    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * N * 3), 3))
-    return g
-  }, [])
-
-  const ptObj = useMemo(() => new THREE.Points(ptGeo,
-    new THREE.PointsMaterial({ color: '#4f8ef7', size: 0.06, sizeAttenuation: true, transparent: true, opacity: 0.75 })
-  ), [ptGeo])
-
-  const lnObj = useMemo(() => new THREE.LineSegments(lnGeo,
-    new THREE.LineBasicMaterial({ color: '#3b82f6', transparent: true, opacity: 0.2 })
-  ), [lnGeo])
-
+// ── Canvas 2D particle network (zero external deps) ───────────────────
+function useParticleCanvas(ref: React.RefObject<HTMLCanvasElement | null>) {
   useEffect(() => {
-    const fn = (e: MouseEvent) => {
-      mouse.current.x = (e.clientX / window.innerWidth  - 0.5) * 2
-      mouse.current.y = -(e.clientY / window.innerHeight - 0.5) * 2
+    const canvas = ref.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    let raf: number
+    let camX = 0, camY = 0, tCamX = 0, tCamY = 0
+
+    const resize = () => {
+      const dpr = Math.min(devicePixelRatio, 1.5)
+      canvas.width  = canvas.offsetWidth  * dpr
+      canvas.height = canvas.offsetHeight * dpr
     }
-    window.addEventListener('mousemove', fn)
-    return () => window.removeEventListener('mousemove', fn)
-  }, [])
+    const ro = new ResizeObserver(resize)
+    ro.observe(canvas)
+    resize()
 
-  useFrame(() => {
-    camera.position.x += (mouse.current.x * 1.4 - camera.position.x) * 0.03
-    camera.position.y += (mouse.current.y * 0.7 - camera.position.y) * 0.03
-    camera.lookAt(0, 0, 0)
-
-    const ptAttr = ptGeo.attributes.position as THREE.BufferAttribute
-    for (let i = 0; i < N; i++) {
-      const p = particles[i]
-      p.pos.addScaledVector(p.vel, 1)
-      if (Math.abs(p.pos.x) > BOX[0]) p.vel.x *= -1
-      if (Math.abs(p.pos.y) > BOX[1]) p.vel.y *= -1
-      if (Math.abs(p.pos.z) > BOX[2]) p.vel.z *= -1
-      ptAttr.setXYZ(i, p.pos.x, p.pos.y, p.pos.z)
+    const onMouse = (e: MouseEvent) => {
+      tCamX =  (e.clientX / innerWidth  - 0.5) * 0.4
+      tCamY = -(e.clientY / innerHeight - 0.5) * 0.25
     }
-    ptAttr.needsUpdate = true
+    window.addEventListener('mousemove', onMouse)
 
-    const lnAttr = lnGeo.attributes.position as THREE.BufferAttribute
-    let vi = 0
-    for (let i = 0; i < N; i++) {
-      for (let j = i + 1; j < N; j++) {
-        const dx = particles[i].pos.x - particles[j].pos.x
-        const dy = particles[i].pos.y - particles[j].pos.y
-        const dz = particles[i].pos.z - particles[j].pos.z
-        if (dx*dx + dy*dy + dz*dz < THRESH_SQ) {
-          lnAttr.setXYZ(vi++, particles[i].pos.x, particles[i].pos.y, particles[i].pos.z)
-          lnAttr.setXYZ(vi++, particles[j].pos.x, particles[j].pos.y, particles[j].pos.z)
+    const particles = Array.from({ length: N }, () => ({
+      x: (Math.random() - 0.5) * BOX[0] * 2,
+      y: (Math.random() - 0.5) * BOX[1] * 2,
+      z: (Math.random() - 0.5) * BOX[2] * 2,
+      vx: (Math.random() - 0.5) * 0.004,
+      vy: (Math.random() - 0.5) * 0.004,
+      vz: (Math.random() - 0.5) * 0.002,
+    }))
+
+    const draw = () => {
+      camX += (tCamX - camX) * 0.03
+      camY += (tCamY - camY) * 0.03
+
+      const W = canvas.width, H = canvas.height
+      const cx = W / 2, cy = H / 2
+      const fov = 6
+
+      ctx.fillStyle = BG
+      ctx.fillRect(0, 0, W, H)
+
+      // Update + project particles
+      const pts = particles.map(p => {
+        p.x += p.vx; p.y += p.vy; p.z += p.vz
+        if (Math.abs(p.x) > BOX[0]) p.vx *= -1
+        if (Math.abs(p.y) > BOX[1]) p.vy *= -1
+        if (Math.abs(p.z) > BOX[2]) p.vz *= -1
+
+        // Simple perspective
+        const cY = Math.cos(camX), sY = Math.sin(camX)
+        const cX = Math.cos(camY), sX = Math.sin(camY)
+        const rx = p.x*cY - p.z*sY, rz0 = p.x*sY + p.z*cY
+        const ry = p.y*cX - rz0*sX, rz = p.y*sX + rz0*cX
+        const scale = fov / (fov + rz)
+        return { sx: rx*scale*80 + cx, sy: ry*scale*80 + cy, scale }
+      })
+
+      // Lines
+      for (let i = 0; i < N; i++) {
+        for (let j = i+1; j < N; j++) {
+          const p = particles[i], q = particles[j]
+          const dx = p.x-q.x, dy = p.y-q.y, dz = p.z-q.z
+          if (dx*dx + dy*dy + dz*dz < THRESH_SQ) {
+            ctx.beginPath()
+            ctx.moveTo(pts[i].sx, pts[i].sy)
+            ctx.lineTo(pts[j].sx, pts[j].sy)
+            ctx.strokeStyle = 'rgba(59,130,246,0.14)'
+            ctx.lineWidth = 1
+            ctx.stroke()
+          }
         }
       }
-    }
-    lnGeo.setDrawRange(0, vi)
-    lnAttr.needsUpdate = true
-  })
 
-  return (
-    <>
-      <primitive object={ptObj} />
-      <primitive object={lnObj} />
-    </>
-  )
+      // Points
+      pts.forEach(p => {
+        ctx.beginPath()
+        ctx.arc(p.sx, p.sy, Math.max(1, 3 * p.scale), 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(79,142,247,0.65)`
+        ctx.fill()
+      })
+
+      raf = requestAnimationFrame(draw)
+    }
+    raf = requestAnimationFrame(draw)
+
+    return () => { cancelAnimationFrame(raf); ro.disconnect(); window.removeEventListener('mousemove', onMouse) }
+  }, [ref])
 }
 
-// ── Exported wrapper ──────────────────────────────────────────────────
-// Usage — wrap your page content with this component:
-//
-//   <Background3D>
-//     <YourPageContent />
-//   </Background3D>
-//
-// The canvas sits behind the children via CSS grid overlap.
+// ── Wrapper component — wraps page content with canvas behind ─────────
 export function Background3D({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ position: 'relative', minHeight: '100dvh', background: BG_COLOR }}>
-      {/* Canvas layer — absolute, fills the wrapper */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
-        <Canvas
-          style={{ width: '100%', height: '100%' }}
-          camera={{ position: [0, 0, 8], fov: 60 }}
-          gl={{ antialias: true, alpha: false }}
-          dpr={[1, 1.5]}
-        >
-          <color attach="background" args={[BG_COLOR]} />
-          <ParticleNetwork />
-        </Canvas>
-      </div>
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  useParticleCanvas(canvasRef)
 
-      {/* Content layer — on top of canvas */}
+  return (
+    <div style={{ position: 'relative', minHeight: '100dvh', background: BG }}>
+      <canvas
+        ref={canvasRef}
+        style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', zIndex: 0, pointerEvents: 'none', display: 'block' }}
+      />
       <div style={{ position: 'relative', zIndex: 1 }}>
         {children}
       </div>
