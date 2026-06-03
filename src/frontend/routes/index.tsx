@@ -1,21 +1,20 @@
-import {
-  Badge,
-  Box,
-  Button,
-  Card,
-  Container,
-  Divider,
-  Group,
-  SimpleGrid,
-  Stack,
-  Text,
-  ThemeIcon,
-  Title,
-} from '@mantine/core'
+import { Button, Group, Text } from '@mantine/core'
 import { createRoute, Link, redirect } from '@tanstack/react-router'
+import { useEffect, useRef, useState } from 'react'
 import { FcGoogle } from 'react-icons/fc'
 import { SiBun, SiPostgresql, SiPrisma, SiReact, SiRedis, SiVite } from 'react-icons/si'
-import { TbArrowRight, TbBolt, TbDatabase, TbKey, TbLogin, TbShieldCheck, TbUsers, TbWifi } from 'react-icons/tb'
+import {
+  TbArrowDown,
+  TbArrowRight,
+  TbBolt,
+  TbDatabase,
+  TbKey,
+  TbLogin,
+  TbShieldCheck,
+  TbUsers,
+  TbWifi,
+} from 'react-icons/tb'
+import { TechNetwork } from '@/frontend/components/landing/TechNetwork'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { getDefaultRoute } from '@/frontend/hooks/useAuth'
 import { authClient } from '@/lib/auth-client'
@@ -48,292 +47,421 @@ export const indexRoute = createRoute({
 const features = [
   {
     icon: TbShieldCheck,
-    color: 'blue',
-    title: 'Secure Authentication',
-    description:
-      'Better Auth v1 with Google OAuth, email/password, signed HttpOnly cookies, and Redis session storage.',
+    color: '#4f8ef7',
+    title: 'Secure Auth',
+    desc: 'Google OAuth + email/password. HttpOnly signed cookies, Redis sessions, blocked-user guard.',
   },
   {
     icon: TbBolt,
-    color: 'yellow',
-    title: 'Lightning Fast Backend',
-    description: 'Bun runtime + Elysia.js with full end-to-end type safety, automatic OpenAPI docs, and zero overhead.',
+    color: '#f59e0b',
+    title: 'Fast Backend',
+    desc: 'Bun runtime + Elysia.js. End-to-end type safety, auto OpenAPI docs, zero-overhead routing.',
   },
   {
     icon: TbDatabase,
-    color: 'teal',
-    title: 'Type-Safe Database',
-    description: 'Prisma ORM with PostgreSQL. Auto-generated client, migrations, and type-safe queries out of the box.',
+    color: '#22c55e',
+    title: 'Type-Safe DB',
+    desc: 'Prisma ORM + PostgreSQL. Auto-generated client, migrations, and type-safe queries.',
   },
   {
     icon: TbWifi,
-    color: 'violet',
-    title: 'Real-Time Presence',
-    description:
-      'WebSocket-powered live presence tracking. Know who is online instantly across every connected client.',
+    color: '#a855f7',
+    title: 'Real-Time',
+    desc: 'WebSocket presence tracking. Know who is online instantly across all connected clients.',
   },
   {
     icon: TbUsers,
-    color: 'pink',
-    title: 'Role-Based Access',
-    description:
-      'Four built-in roles: USER, QC, ADMIN, and SUPER_ADMIN. Fine-grained route guards and permission layers.',
+    color: '#ec4899',
+    title: 'Role Access',
+    desc: 'Four roles: USER, QC, ADMIN, SUPER_ADMIN. Fine-grained route guards and permission layers.',
   },
   {
     icon: TbKey,
-    color: 'orange',
+    color: '#f97316',
     title: 'Dev Console',
-    description:
-      'Built-in admin panel with live logs, DB schema viewer, user management, audit trails, and MCP integration.',
+    desc: 'Built-in /dev panel: logs, DB schema, user management, MCP integration, file health.',
   },
 ]
 
-const techStack = [
-  { icon: SiBun, label: 'Bun', color: '#fbf0df' },
+const tech = [
+  { icon: SiBun, label: 'Bun', color: '#f5d5aa' },
   { icon: SiReact, label: 'React 19', color: '#61dafb' },
-  { icon: SiVite, label: 'Vite 8', color: '#bd34fe' },
-  { icon: SiPrisma, label: 'Prisma', color: '#5a67d8' },
-  { icon: SiPostgresql, label: 'PostgreSQL', color: '#4169e1' },
+  { icon: SiVite, label: 'Vite 8', color: '#a855f7' },
+  { icon: SiPrisma, label: 'Prisma', color: '#6366f1' },
+  { icon: SiPostgresql, label: 'PostgreSQL', color: '#3d7ee8' },
   { icon: SiRedis, label: 'Redis', color: '#ff4438' },
   { icon: FcGoogle, label: 'Google Auth', color: '' },
 ]
 
-function HomePage() {
+function useWindowSize() {
+  const [size, setSize] = useState({ w: 0, h: 0 })
+  useEffect(() => {
+    const update = () => setSize({ w: window.innerWidth, h: window.innerHeight })
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+  return size
+}
+
+function useScrollReveal() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    if (!ref.current) return
+    const obs = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) setVisible(true)
+      },
+      { threshold: 0.15 },
+    )
+    obs.observe(ref.current)
+    return () => obs.disconnect()
+  }, [])
+  return { ref, visible }
+}
+
+function FeatureCard({ icon: Icon, color, title, desc, delay }: (typeof features)[0] & { delay: number }) {
+  const { ref, visible } = useScrollReveal()
   return (
-    <Box style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
-      {/* ── Navbar ─────────────────────────────────────────────────── */}
-      <Box
-        component="nav"
-        px={{ base: 'md', sm: 'xl' }}
-        py="md"
+    <div
+      ref={ref}
+      style={{
+        background: 'rgba(255,255,255,0.032)',
+        border: '1px solid rgba(255,255,255,0.07)',
+        borderRadius: 16,
+        padding: '28px 24px',
+        transition: `opacity 0.6s ${delay}ms, transform 0.6s ${delay}ms, border-color 0.2s, background 0.2s`,
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(28px)',
+        cursor: 'default',
+      }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget
+        el.style.borderColor = `${color}55`
+        el.style.background = `${color}0d`
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget
+        el.style.borderColor = 'rgba(255,255,255,0.07)'
+        el.style.background = 'rgba(255,255,255,0.032)'
+      }}
+    >
+      <div
         style={{
+          width: 44,
+          height: 44,
+          borderRadius: 12,
+          background: `${color}22`,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottom: '1px solid var(--mantine-color-default-border)',
-          backdropFilter: 'blur(12px)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-          background: 'var(--mantine-color-body)',
+          justifyContent: 'center',
+          marginBottom: 16,
         }}
       >
-        <Group gap="xs">
-          <SiBun size={22} color="#fbf0df" />
-          <Text fw={700} size="md" style={{ letterSpacing: '-0.02em' }}>
-            Base Template
-          </Text>
-        </Group>
-        <Group gap="sm">
-          <ThemeToggle size="sm" />
-          <Button component={Link} to="/login" size="xs" leftSection={<TbLogin size={14} />}>
-            Sign In
-          </Button>
-        </Group>
-      </Box>
+        <Icon size={22} color={color} />
+      </div>
+      <Text fw={700} size="sm" c="white" mb={8}>
+        {title}
+      </Text>
+      <Text size="sm" lh={1.65} style={{ color: 'rgba(255,255,255,0.48)' }}>
+        {desc}
+      </Text>
+    </div>
+  )
+}
 
-      {/* ── Hero ───────────────────────────────────────────────────── */}
-      <Box
-        style={{
-          flex: 1,
-          position: 'relative',
-          overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'center',
-        }}
-      >
-        {/* Gradient orbs */}
-        <Box
+function HomePage() {
+  const { w, h } = useWindowSize()
+  const { ref: ctaRef, visible: ctaVisible } = useScrollReveal()
+
+  return (
+    <div style={{ background: '#09090f', minHeight: '100dvh', fontFamily: 'system-ui, sans-serif' }}>
+      {/* ── Hero: full-viewport D3 network ─────────────────── */}
+      <section style={{ height: '100dvh', position: 'relative', overflow: 'hidden' }}>
+        {/* D3 canvas layer */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+          <TechNetwork width={w} height={h} />
+        </div>
+
+        {/* Vignette: darkens edges, keeps center visible */}
+        <div
           style={{
             position: 'absolute',
-            width: 600,
-            height: 600,
-            borderRadius: '50%',
-            background:
-              'radial-gradient(circle, color-mix(in srgb, var(--mantine-color-blue-5) 15%, transparent) 0%, transparent 70%)',
-            top: '-10%',
-            left: '-10%',
-            pointerEvents: 'none',
-          }}
-        />
-        <Box
-          style={{
-            position: 'absolute',
-            width: 500,
-            height: 500,
-            borderRadius: '50%',
-            background:
-              'radial-gradient(circle, color-mix(in srgb, var(--mantine-color-violet-5) 12%, transparent) 0%, transparent 70%)',
-            bottom: '-5%',
-            right: '-5%',
-            pointerEvents: 'none',
+            inset: 0,
+            zIndex: 1,
+            background: 'radial-gradient(ellipse 72% 72% at 50% 50%, transparent 30%, #09090f 100%)',
           }}
         />
 
-        <Container size="lg" px={{ base: 'md', sm: 'xl' }} py={{ base: 60, sm: 80, md: 100 }} w="100%">
-          <Stack align="center" gap={0}>
-            <Badge
-              variant="light"
-              color="blue"
-              size="lg"
-              mb="xl"
-              leftSection={<TbBolt size={12} />}
-              style={{ letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: 11 }}
-            >
+        {/* Navbar */}
+        <nav
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '18px 48px',
+            borderBottom: '1px solid rgba(255,255,255,0.05)',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          <Group gap="xs">
+            <SiBun size={20} color="#f5d5aa" />
+            <Text fw={700} size="sm" style={{ color: '#f8fafc', letterSpacing: '-0.02em' }}>
+              Base Template
+            </Text>
+          </Group>
+          <Group gap="sm">
+            <ThemeToggle size="sm" />
+            <Button component={Link} to="/login" size="xs" leftSection={<TbLogin size={13} />} variant="filled">
+              Sign In
+            </Button>
+          </Group>
+        </nav>
+
+        {/* Hero text overlay */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 5,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0 24px',
+            textAlign: 'center',
+            pointerEvents: 'none',
+          }}
+        >
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '5px 14px',
+              borderRadius: 99,
+              background: 'rgba(79,142,247,0.12)',
+              border: '1px solid rgba(79,142,247,0.28)',
+              marginBottom: 28,
+            }}
+          >
+            <TbBolt size={13} color="#4f8ef7" />
+            <Text size="xs" fw={600} style={{ color: '#4f8ef7', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               Full-Stack Starter Template
-            </Badge>
+            </Text>
+          </div>
 
-            <Title
-              order={1}
-              ta="center"
-              mb="md"
+          <h1
+            style={{
+              margin: 0,
+              fontSize: 'clamp(2.4rem, 6.5vw, 5rem)',
+              fontWeight: 900,
+              letterSpacing: '-0.04em',
+              lineHeight: 1.06,
+              color: '#f8fafc',
+              maxWidth: 820,
+            }}
+          >
+            Build production apps
+            <span
               style={{
-                fontSize: 'clamp(2rem, 6vw, 3.75rem)',
-                fontWeight: 800,
-                letterSpacing: '-0.03em',
-                lineHeight: 1.1,
-                maxWidth: 800,
+                display: 'block',
+                background: 'linear-gradient(135deg, #4f8ef7, #a855f7)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
               }}
             >
-              Build production apps{' '}
-              <Text span inherit variant="gradient" gradient={{ from: 'blue', to: 'violet', deg: 135 }}>
-                at lightning speed
-              </Text>
-            </Title>
+              at lightning speed
+            </span>
+          </h1>
 
-            <Text c="dimmed" ta="center" size="lg" maw={560} mb="xl" lh={1.7} px={{ base: 'xs', sm: 0 }}>
-              A modern, opinionated full-stack template with authentication, real-time features, role-based access
-              control, and a built-in dev console — ready to ship.
-            </Text>
+          <p
+            style={{
+              margin: '24px 0 0',
+              fontSize: 'clamp(1rem, 2vw, 1.2rem)',
+              lineHeight: 1.7,
+              color: 'rgba(248,250,252,0.52)',
+              maxWidth: 520,
+            }}
+          >
+            Interact with the network above — drag nodes, hover to reveal connections, move your cursor to push them
+            around.
+          </p>
 
-            <Group gap="sm" justify="center" wrap="wrap">
-              <Button
-                component={Link}
-                to="/login"
-                size="md"
-                leftSection={<TbLogin size={16} />}
-                rightSection={<TbArrowRight size={16} />}
-                style={{ minWidth: 160 }}
-              >
-                Get Started
-              </Button>
-              <Button component={Link} to="/dashboard" size="md" variant="default" style={{ minWidth: 140 }}>
-                View Demo
-              </Button>
-            </Group>
-
-            {/* Tech stack row */}
-            <Box mt={56} style={{ width: '100%', maxWidth: 640 }}>
-              <Text ta="center" size="xs" c="dimmed" mb="md" tt="uppercase" fw={600} style={{ letterSpacing: '0.1em' }}>
-                Powered by
-              </Text>
-              <Group justify="center" gap="xl" wrap="wrap">
-                {techStack.map(({ icon: Icon, label, color }) => (
-                  <Group key={label} gap={6} style={{ opacity: 0.75 }}>
-                    <Icon size={18} color={color || undefined} />
-                    <Text size="sm" fw={500} c="dimmed">
-                      {label}
-                    </Text>
-                  </Group>
-                ))}
-              </Group>
-            </Box>
-          </Stack>
-        </Container>
-      </Box>
-
-      {/* ── Features ───────────────────────────────────────────────── */}
-      <Box py={{ base: 60, sm: 80 }} style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
-        <Container size="lg" px={{ base: 'md', sm: 'xl' }}>
-          <Stack align="center" gap="xs" mb={48}>
-            <Text size="xs" c="dimmed" tt="uppercase" fw={700} style={{ letterSpacing: '0.1em' }}>
-              Features
-            </Text>
-            <Title order={2} ta="center" fz={{ base: 'xl', sm: '2xl' }} fw={700} style={{ letterSpacing: '-0.02em' }}>
-              Everything you need, nothing you don't
-            </Title>
-            <Text c="dimmed" ta="center" maw={480} size="sm" lh={1.7}>
-              Carefully selected tools and patterns proven in production. Skip the boilerplate, focus on your product.
-            </Text>
-          </Stack>
-
-          <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
-            {features.map((f) => (
-              <Card
-                key={f.title}
-                withBorder
-                radius="md"
-                p="xl"
-                style={{
-                  transition: 'border-color 150ms ease, transform 150ms ease',
-                  cursor: 'default',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--mantine-color-blue-5)'
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = ''
-                  e.currentTarget.style.transform = ''
-                }}
-              >
-                <ThemeIcon variant="light" color={f.color} size={40} radius="md" mb="md">
-                  <f.icon size={20} />
-                </ThemeIcon>
-                <Text fw={600} mb={6} size="sm">
-                  {f.title}
-                </Text>
-                <Text c="dimmed" size="sm" lh={1.6}>
-                  {f.description}
-                </Text>
-              </Card>
-            ))}
-          </SimpleGrid>
-        </Container>
-      </Box>
-
-      {/* ── CTA Banner ─────────────────────────────────────────────── */}
-      <Box py={{ base: 60, sm: 80 }} style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
-        <Container size="sm" px={{ base: 'md', sm: 'xl' }}>
-          <Stack align="center" gap="lg">
-            <Title order={2} ta="center" fz={{ base: 'xl', sm: '2xl' }} fw={700} style={{ letterSpacing: '-0.02em' }}>
-              Ready to build something great?
-            </Title>
-            <Text c="dimmed" ta="center" size="sm" maw={380} lh={1.7}>
-              Sign in with Google or your email and start building in seconds.
-            </Text>
+          <div
+            style={{
+              marginTop: 36,
+              display: 'flex',
+              gap: 12,
+              pointerEvents: 'all',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+            }}
+          >
             <Button
               component={Link}
               to="/login"
               size="md"
               leftSection={<TbLogin size={16} />}
               rightSection={<TbArrowRight size={16} />}
+              style={{ background: 'linear-gradient(135deg, #4f8ef7, #6366f1)', border: 'none', fontWeight: 700 }}
             >
-              Start Building
+              Get Started
             </Button>
-          </Stack>
-        </Container>
-      </Box>
+            <Button
+              component={Link}
+              to="/dashboard"
+              size="md"
+              variant="subtle"
+              style={{ color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.1)' }}
+            >
+              View Demo
+            </Button>
+          </div>
+        </div>
 
-      {/* ── Footer ─────────────────────────────────────────────────── */}
-      <Box style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
-        <Container size="lg" px={{ base: 'md', sm: 'xl' }} py="lg">
-          <Group justify="space-between" wrap="wrap" gap="xs">
-            <Group gap="xs">
-              <SiBun size={16} color="#fbf0df" />
-              <Text size="xs" c="dimmed">
-                Base Template — Bun · Elysia · React · Prisma
+        {/* Scroll indicator */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 32,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 10,
+            animation: 'bob 2s ease-in-out infinite',
+          }}
+        >
+          <style>{`@keyframes bob { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(6px)} }`}</style>
+          <TbArrowDown size={20} color="rgba(255,255,255,0.25)" />
+        </div>
+      </section>
+
+      {/* ── Tech stack strip ─────────────────────────────── */}
+      <div
+        style={{
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          padding: '20px 0',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 40, flexWrap: 'wrap', padding: '0 24px' }}>
+          {tech.map(({ icon: Icon, label, color }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.6 }}>
+              <Icon size={17} color={color || undefined} />
+              <Text size="sm" fw={500} style={{ color: 'rgba(248,250,252,0.7)' }}>
+                {label}
               </Text>
-            </Group>
-            <Group gap="xs">
-              <Divider orientation="vertical" />
-              <Text size="xs" c="dimmed">
-                Built with Bun · Elysia · React · Prisma
-              </Text>
-            </Group>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Features grid ────────────────────────────────── */}
+      <section style={{ padding: 'clamp(48px,8vw,96px) clamp(16px,6vw,80px)' }}>
+        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+          <Text
+            ta="center"
+            size="xs"
+            fw={700}
+            style={{ color: '#4f8ef7', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}
+          >
+            Features
+          </Text>
+          <h2
+            style={{
+              margin: '0 0 12px',
+              textAlign: 'center',
+              fontSize: 'clamp(1.6rem,4vw,2.4rem)',
+              fontWeight: 800,
+              letterSpacing: '-0.03em',
+              color: '#f8fafc',
+            }}
+          >
+            Everything you need
+          </h2>
+          <p
+            style={{
+              textAlign: 'center',
+              color: 'rgba(255,255,255,0.4)',
+              marginBottom: 48,
+              maxWidth: 440,
+              marginLeft: 'auto',
+              marginRight: 'auto',
+              lineHeight: 1.7,
+            }}
+          >
+            Carefully selected tools proven in production. Skip boilerplate, focus on your product.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+            {features.map((f, i) => (
+              <FeatureCard key={f.title} {...f} delay={i * 80} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA ──────────────────────────────────────────── */}
+      <section style={{ padding: 'clamp(48px,8vw,80px) 24px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div
+          ref={ctaRef}
+          style={{
+            maxWidth: 560,
+            margin: '0 auto',
+            textAlign: 'center',
+            transition: 'opacity 0.7s, transform 0.7s',
+            opacity: ctaVisible ? 1 : 0,
+            transform: ctaVisible ? 'translateY(0)' : 'translateY(24px)',
+          }}
+        >
+          <h2
+            style={{
+              margin: '0 0 12px',
+              fontSize: 'clamp(1.4rem,3.5vw,2rem)',
+              fontWeight: 800,
+              letterSpacing: '-0.03em',
+              color: '#f8fafc',
+            }}
+          >
+            Ready to build something great?
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.4)', marginBottom: 28, lineHeight: 1.7 }}>
+            Sign in with Google or email and start shipping in seconds.
+          </p>
+          <Button
+            component={Link}
+            to="/login"
+            size="md"
+            leftSection={<TbLogin size={16} />}
+            rightSection={<TbArrowRight size={16} />}
+            style={{ background: 'linear-gradient(135deg, #4f8ef7, #6366f1)', border: 'none', fontWeight: 700 }}
+          >
+            Start Building
+          </Button>
+        </div>
+      </section>
+
+      {/* ── Footer ───────────────────────────────────────── */}
+      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '20px 48px' }}>
+        <div
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}
+        >
+          <Group gap="xs">
+            <SiBun size={15} color="#f5d5aa" />
+            <Text size="xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              Base Template
+            </Text>
           </Group>
-        </Container>
-      </Box>
-    </Box>
+          <Text size="xs" style={{ color: 'rgba(255,255,255,0.2)' }}>
+            Bun · Elysia · React · Prisma · Redis
+          </Text>
+        </div>
+      </footer>
+    </div>
   )
 }
