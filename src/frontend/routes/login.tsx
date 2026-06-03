@@ -94,8 +94,6 @@ function LoginPage() {
         minHeight: '100dvh',
         display: 'flex',
         flexDirection: 'column',
-        position: 'relative',
-        zIndex: 1,
       }}
     >
       {/* Header with theme toggle */}

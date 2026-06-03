@@ -3,16 +3,15 @@ import { Suspense, useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 
 // ── Config ────────────────────────────────────────────────────────────
-const N   = 80     // particle count
-const BOX = [10, 5.5, 3.5] as const  // half-extents
-const THRESH_SQ = 3.2 * 3.2          // connection distance²
+const N         = 80
+const BOX       = [10, 5.5, 3.5] as const
+const THRESH_SQ = 3.2 * 3.2
 
-// ── Particle network (Points + LineSegments, both via primitive) ──────
+// ── Particle network ──────────────────────────────────────────────────
 function ParticleNetwork() {
   const { camera } = useThree()
   const mouse = useRef({ x: 0, y: 0 })
 
-  // Particle state (positions + velocities)
   const particles = useMemo(() =>
     Array.from({ length: N }, () => ({
       pos: new THREE.Vector3(
@@ -28,33 +27,26 @@ function ParticleNetwork() {
     }))
   , [])
 
-  // Points geometry (positions updated per frame)
   const ptGeo = useMemo(() => {
     const g = new THREE.BufferGeometry()
     g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3))
     return g
   }, [])
 
-  // LineSegments geometry (connections updated per frame)
   const lnGeo = useMemo(() => {
     const g = new THREE.BufferGeometry()
-    // Max lines: N*(N-1)/2 pairs × 2 endpoints × 3 floats
     g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * N * 3), 3))
     return g
   }, [])
 
-  // Three.js objects (avoid <line> → SVG ambiguity, use primitive)
-  const ptObj = useMemo(() =>
-    new THREE.Points(ptGeo,
-      new THREE.PointsMaterial({ color: '#4f8ef7', size: 0.05, sizeAttenuation: true, transparent: true, opacity: 0.55 })
-    ), [ptGeo])
+  const ptObj = useMemo(() => new THREE.Points(ptGeo,
+    new THREE.PointsMaterial({ color: '#4f8ef7', size: 0.06, sizeAttenuation: true, transparent: true, opacity: 0.7 })
+  ), [ptGeo])
 
-  const lnObj = useMemo(() =>
-    new THREE.LineSegments(lnGeo,
-      new THREE.LineBasicMaterial({ color: '#3b82f6', transparent: true, opacity: 0.11 })
-    ), [lnGeo])
+  const lnObj = useMemo(() => new THREE.LineSegments(lnGeo,
+    new THREE.LineBasicMaterial({ color: '#3b82f6', transparent: true, opacity: 0.18 })
+  ), [lnGeo])
 
-  // Mouse tracking
   useEffect(() => {
     const fn = (e: MouseEvent) => {
       mouse.current.x = (e.clientX / window.innerWidth  - 0.5) * 2
@@ -65,12 +57,12 @@ function ParticleNetwork() {
   }, [])
 
   useFrame(() => {
-    // Subtle camera parallax
+    // Camera parallax
     camera.position.x += (mouse.current.x * 1.4 - camera.position.x) * 0.03
     camera.position.y += (mouse.current.y * 0.7 - camera.position.y) * 0.03
     camera.lookAt(0, 0, 0)
 
-    // Update particle positions (drift + boundary bounce)
+    // Drift particles
     const ptAttr = ptGeo.attributes.position as THREE.BufferAttribute
     for (let i = 0; i < N; i++) {
       const p = particles[i]
@@ -82,7 +74,7 @@ function ParticleNetwork() {
     }
     ptAttr.needsUpdate = true
 
-    // Update connection lines (O(N²) — fine for N=80)
+    // Update connections
     const lnAttr = lnGeo.attributes.position as THREE.BufferAttribute
     let vi = 0
     for (let i = 0; i < N; i++) {
@@ -109,17 +101,34 @@ function ParticleNetwork() {
 }
 
 // ── Public export ─────────────────────────────────────────────────────
-// Renders as a fixed full-screen canvas behind all page content.
-// Add <Background3D /> at the top of any page component — no extra
-// z-index setup needed; content renders above automatically.
+// Renders a fixed full-screen canvas at z-index:-1 with its own solid
+// background. Overrides body/html background to transparent while mounted
+// so the canvas is visible as the page background.
 export function Background3D() {
+  useEffect(() => {
+    // Save current inline background values
+    const bodyBg = document.body.style.backgroundColor
+    const htmlBg = document.documentElement.style.backgroundColor
+
+    // Make html+body transparent so the canvas shows through
+    document.body.style.backgroundColor = 'transparent'
+    document.documentElement.style.backgroundColor = 'transparent'
+
+    return () => {
+      document.body.style.backgroundColor = bodyBg
+      document.documentElement.style.backgroundColor = htmlBg
+    }
+  }, [])
+
   return (
     <Canvas
-      style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}
+      style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none' }}
       camera={{ position: [0, 0, 8], fov: 60 }}
-      gl={{ antialias: true, alpha: true }}
+      gl={{ antialias: true, alpha: false }}
       dpr={Math.min(window.devicePixelRatio, 1.5)}
     >
+      {/* Solid dark background — becomes the page background */}
+      <color attach="background" args={['#0d1117']} />
       <Suspense fallback={null}>
         <ParticleNetwork />
       </Suspense>

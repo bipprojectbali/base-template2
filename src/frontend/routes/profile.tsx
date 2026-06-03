@@ -47,7 +47,7 @@ function ProfilePage() {
   return (
     <>
       <Background3D />
-      <Container size="sm" px={{ base: 'md', sm: 'lg' }} py={{ base: 'md', sm: 'xl' }} style={{ position: 'relative', zIndex: 1 }}>
+      <Container size="sm" px={{ base: 'md', sm: 'lg' }} py={{ base: 'md', sm: 'xl' }}>
       <Stack gap="md">
         {/* Header row — stacks on very small screens */}
         <Group justify="space-between" align="center" wrap="wrap" gap="sm">

@@ -18,7 +18,7 @@ function BlockedPage() {
   return (
     <>
       <Background3D />
-    <Box style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
+    <Box style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       {/* Header with theme toggle */}
       <Box px={{ base: 'md', sm: 'xl' }} py="sm" style={{ display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
         <ThemeToggle />
