@@ -14,7 +14,7 @@ import {
   TbUsers,
   TbWifi,
 } from 'react-icons/tb'
-import { TechNetwork } from '@/frontend/components/landing/TechNetwork'
+import { Scene3D } from '@/frontend/components/landing/Scene3D'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { getDefaultRoute } from '@/frontend/hooks/useAuth'
 import { authClient } from '@/lib/auth-client'
@@ -93,17 +93,6 @@ const tech = [
   { icon: FcGoogle, label: 'Google Auth', color: '' },
 ]
 
-function useWindowSize() {
-  const [size, setSize] = useState({ w: 0, h: 0 })
-  useEffect(() => {
-    const update = () => setSize({ w: window.innerWidth, h: window.innerHeight })
-    update()
-    window.addEventListener('resize', update)
-    return () => window.removeEventListener('resize', update)
-  }, [])
-  return size
-}
-
 function useScrollReveal() {
   const ref = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
@@ -172,16 +161,15 @@ function FeatureCard({ icon: Icon, color, title, desc, delay }: (typeof features
 }
 
 function HomePage() {
-  const { w, h } = useWindowSize()
   const { ref: ctaRef, visible: ctaVisible } = useScrollReveal()
 
   return (
     <div style={{ background: '#09090f', minHeight: '100dvh', fontFamily: 'system-ui, sans-serif' }}>
       {/* ── Hero: full-viewport D3 network ─────────────────── */}
       <section style={{ height: '100dvh', position: 'relative', overflow: 'hidden' }}>
-        {/* D3 canvas layer */}
+        {/* 3D scene layer */}
         <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-          <TechNetwork width={w} height={h} />
+          <Scene3D />
         </div>
 
         {/* Vignette: darkens edges, keeps center visible */}
