@@ -20,6 +20,7 @@ import { createRoute, redirect } from '@tanstack/react-router'
 import { useState } from 'react'
 import { FcGoogle } from 'react-icons/fc'
 import { TbAlertCircle, TbCheck, TbClock, TbLock, TbLogin, TbMail, TbShieldCheck, TbUsers } from 'react-icons/tb'
+import { Background3D } from '@/frontend/components/Background3D'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { getDefaultRoute } from '@/frontend/hooks/useAuth'
 import { authClient } from '@/lib/auth-client'
@@ -86,11 +87,15 @@ function LoginPage() {
   }
 
   return (
+    <>
+      <Background3D />
     <Box
       style={{
         minHeight: '100dvh',
         display: 'flex',
         flexDirection: 'column',
+        position: 'relative',
+        zIndex: 1,
       }}
     >
       {/* Header with theme toggle */}
@@ -352,5 +357,6 @@ function LoginPage() {
         </Grid>
       </Box>
     </Box>
+    </>
   )
 }

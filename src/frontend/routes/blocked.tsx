@@ -1,6 +1,7 @@
 import { Alert, Box, Button, Paper, Stack, Text, ThemeIcon, Title } from '@mantine/core'
 import { createRoute } from '@tanstack/react-router'
 import { TbAlertTriangle, TbLogout, TbShieldOff } from 'react-icons/tb'
+import { Background3D } from '@/frontend/components/Background3D'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { useLogout } from '@/frontend/hooks/useAuth'
 import { rootRoute } from './__root'
@@ -15,7 +16,9 @@ function BlockedPage() {
   const logout = useLogout()
 
   return (
-    <Box style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+    <>
+      <Background3D />
+    <Box style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
       {/* Header with theme toggle */}
       <Box px={{ base: 'md', sm: 'xl' }} py="sm" style={{ display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
         <ThemeToggle />
@@ -79,5 +82,6 @@ function BlockedPage() {
         </Paper>
       </Box>
     </Box>
+    </>
   )
 }

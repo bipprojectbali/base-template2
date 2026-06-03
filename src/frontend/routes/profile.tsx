@@ -2,6 +2,7 @@ import { Badge, Button, Container, Divider, Group, Paper, Stack, Text, Title } f
 import { modals } from '@mantine/modals'
 import { createRoute, Link, redirect } from '@tanstack/react-router'
 import { TbLogout, TbUser } from 'react-icons/tb'
+import { Background3D } from '@/frontend/components/Background3D'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { UserAvatar } from '@/frontend/components/UserAvatar'
 import { useLogout, useSession } from '@/frontend/hooks/useAuth'
@@ -44,7 +45,9 @@ function ProfilePage() {
   const user = data?.user
 
   return (
-    <Container size="sm" px={{ base: 'md', sm: 'lg' }} py={{ base: 'md', sm: 'xl' }}>
+    <>
+      <Background3D />
+      <Container size="sm" px={{ base: 'md', sm: 'lg' }} py={{ base: 'md', sm: 'xl' }} style={{ position: 'relative', zIndex: 1 }}>
       <Stack gap="md">
         {/* Header row — stacks on very small screens */}
         <Group justify="space-between" align="center" wrap="wrap" gap="sm">
@@ -130,5 +133,6 @@ function ProfilePage() {
         </Paper>
       </Stack>
     </Container>
+    </>
   )
 }
