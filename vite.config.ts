@@ -8,6 +8,16 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    // Paksa satu instance three.js di seluruh app — mencegah konflik
+    // antara three@0.184 (root) vs three@0.170 (nested di stats-gl/maath).
+    // Tanpa ini, R3F mendapat instance THREE yang berbeda dari renderer-nya,
+    // sehingga Canvas render kosong tanpa error.
+    dedupe: ['three', '@react-three/fiber', '@react-three/drei'],
+  },
+  // Pre-bundle three.js dan R3F agar Vite tidak memuat dua versi berbeda
+  // di development mode. Ini kritis untuk R3F berfungsi di Vite.
+  optimizeDeps: {
+    include: ['three', '@react-three/fiber', '@react-three/drei'],
   },
   plugins: [react()],
   build: {
@@ -23,6 +33,7 @@ export default defineConfig({
           if (id.includes('node_modules/@tanstack')) return 'tanstack'
           if (id.includes('node_modules/react-icons')) return 'icons'
           if (id.includes('node_modules/@xyflow') || id.includes('node_modules/elkjs')) return 'xyflow'
+          if (id.includes('node_modules/three') || id.includes('node_modules/@react-three')) return 'three'
           if (id.includes('node_modules/')) return 'vendor'
         },
       },
