@@ -5,11 +5,13 @@ import {
   Burger,
   Divider,
   Group,
+  Menu,
   NavLink,
   Stack,
   Text,
   ThemeIcon,
   Tooltip,
+  useMantineColorScheme,
 } from '@mantine/core'
 import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import { createRoute, redirect, useNavigate } from '@tanstack/react-router'
@@ -22,14 +24,18 @@ import {
   TbChevronRight,
   TbCode,
   TbDatabase,
+  TbDotsVertical,
   TbLayoutDashboard,
   TbLayoutSidebarLeftCollapse,
   TbLayoutSidebarLeftExpand,
   TbLogout,
+  TbMoon,
   TbRuler2,
   TbServer,
   TbSettings,
   TbSitemap,
+  TbSun,
+  TbUser,
   TbUserSearch,
   TbUsers,
 } from 'react-icons/tb'
@@ -42,7 +48,6 @@ import { PlaceholderPanel } from '@/frontend/components/dev/PlaceholderPanel'
 import { ProjectPanel } from '@/frontend/components/dev/ProjectPanel'
 import { UserLogsPanel } from '@/frontend/components/dev/UserLogsPanel'
 import { UsersPanel } from '@/frontend/components/dev/UsersPanel'
-import { ThemeToggle } from '@/frontend/components/ThemeToggle'
 import { TicketsPanel } from '@/frontend/components/TicketsPanel'
 import { UserAvatar } from '@/frontend/components/UserAvatar'
 import { useLogout, useSession } from '@/frontend/hooks/useAuth'
@@ -105,6 +110,7 @@ const navItems = [
 function DevPage() {
   const { data } = useSession()
   const logout = useLogout()
+  const { colorScheme, toggleColorScheme } = useMantineColorScheme()
   const user = data?.user
   const { tab: active } = devRoute.useSearch()
   const navigate = useNavigate()
@@ -247,38 +253,72 @@ function DevPage() {
         <AppShell.Section>
           <Box p={collapsed ? 'xs' : 'sm'} style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}>
             {collapsed ? (
-              <Stack align="center" gap={4}>
-                <Tooltip label={user?.name} position="right">
-                  <UserAvatar user={user} color="red" size="sm" />
-                </Tooltip>
-                <ThemeToggle size="sm" />
-                <Tooltip label="Logout" position="right">
-                  <ActionIcon variant="subtle" color="red" size="sm" onClick={confirmLogout} loading={logout.isPending}>
-                    <TbLogout size={14} />
-                  </ActionIcon>
-                </Tooltip>
+              <Stack align="center" gap={0}>
+                <Menu position="right-end" withArrow shadow="md">
+                  <Menu.Target>
+                    <Box style={{ cursor: 'pointer', display: 'inline-flex' }}>
+                      <UserAvatar user={user} color="red" size="sm" />
+                    </Box>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    <Menu.Label>{user?.name}</Menu.Label>
+                    <Menu.Label c="dimmed">{user?.email}</Menu.Label>
+                    <Menu.Divider />
+                    <Menu.Item
+                      leftSection={colorScheme === 'dark' ? <TbSun size={14} /> : <TbMoon size={14} />}
+                      onClick={() => toggleColorScheme()}
+                      closeMenuOnClick={false}
+                    >
+                      {colorScheme === 'dark' ? 'Light mode' : 'Dark mode'}
+                    </Menu.Item>
+                    <Menu.Item leftSection={<TbUser size={14} />} component="a" href="/profile">
+                      Profile
+                    </Menu.Item>
+                    <Menu.Divider />
+                    <Menu.Item color="red" leftSection={<TbLogout size={14} />} onClick={confirmLogout}>
+                      Logout
+                    </Menu.Item>
+                  </Menu.Dropdown>
+                </Menu>
               </Stack>
             ) : (
-              <Group justify="space-between">
-                <Group gap="xs">
-                  <UserAvatar user={user} color="red" size="sm" />
-                  <div>
-                    <Text size="xs" fw={500}>
+              <Group justify="space-between" wrap="nowrap">
+                <Group gap="xs" wrap="nowrap" style={{ overflow: 'hidden', flex: 1 }}>
+                  <div style={{ flexShrink: 0 }}>
+                    <UserAvatar user={user} color="red" size="sm" />
+                  </div>
+                  <div style={{ overflow: 'hidden', flex: 1 }}>
+                    <Text size="xs" fw={500} truncate>
                       {user?.name}
                     </Text>
-                    <Text size="xs" c="dimmed">
+                    <Text size="xs" c="dimmed" truncate>
                       {user?.email}
                     </Text>
                   </div>
                 </Group>
-                <Group gap={4}>
-                  <ThemeToggle size="sm" />
-                  <Tooltip label="Logout">
-                    <ActionIcon variant="subtle" color="red" onClick={confirmLogout} loading={logout.isPending}>
-                      <TbLogout size={16} />
+                <Menu position="top-end" withArrow shadow="md">
+                  <Menu.Target>
+                    <ActionIcon variant="subtle" color="gray" size="sm" style={{ flexShrink: 0 }}>
+                      <TbDotsVertical size={14} />
                     </ActionIcon>
-                  </Tooltip>
-                </Group>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    <Menu.Item
+                      leftSection={colorScheme === 'dark' ? <TbSun size={14} /> : <TbMoon size={14} />}
+                      onClick={() => toggleColorScheme()}
+                      closeMenuOnClick={false}
+                    >
+                      {colorScheme === 'dark' ? 'Light mode' : 'Dark mode'}
+                    </Menu.Item>
+                    <Menu.Item leftSection={<TbUser size={14} />} component="a" href="/profile">
+                      Profile
+                    </Menu.Item>
+                    <Menu.Divider />
+                    <Menu.Item color="red" leftSection={<TbLogout size={14} />} onClick={confirmLogout}>
+                      Logout
+                    </Menu.Item>
+                  </Menu.Dropdown>
+                </Menu>
               </Group>
             )}
           </Box>
