@@ -2,6 +2,44 @@
 
 `@mantine/core` provides 120+ components. This reference covers key patterns.
 
+## Patch notes (v9.2.1 -> v9.2.2)
+
+- `Checkbox`, `Radio`, and `Switch` now pass the generated error id into `aria-describedby`, which matters if you depend on Mantine's built-in error text for screen-reader context.
+- `Slider` and `RangeSlider` support `aria-valuetext`; use it when the numeric value needs a spoken label different from the raw number.
+- `Menu` adds safe polygon support for submenus, reducing accidental submenu closure on diagonal pointer movement.
+- `Menu.Sub` can receive safe-area polygon options; use this when submenu pointer corridors need custom tuning.
+- `Table` fixes sticky-header border rendering, `PinInput` stops blocking common numeric-input keyboard shortcuts, and `Highlight` supports accent-insensitive matching.
+- `Pill` overflow handling, `Input` section placement under local `dir` overrides, and `Select` clear-button visibility for falsy primitive values were fixed in `9.2.2`; remove local layout/clear-button workarounds after upgrade.
+- Modal, Drawer, and Spotlight attribute typings were corrected; re-run TypeScript on wrappers that pass custom attributes through those components.
+- `@mantine/tiptap` controls no longer throw when the editor is destroyed or not initialized, but still guard custom controls against null editor instances in app code.
+- `Dropzone` now defaults `useFsAccessApi` to `false` for broader browser compatibility; enable it explicitly only when you need the File System Access API behavior and your target browsers support it.
+
+## New in v9.0
+
+### FloatingWindow
+
+Draggable floating element with viewport constraint support:
+
+```tsx
+import { FloatingWindow } from "@mantine/core";
+
+<FloatingWindow w={280} p="md" withBorder radius="md" excludeDragHandleSelector="button" initialPosition={{ top: 300, left: 20 }} style={{ cursor: "move" }}>
+  Drag me around
+</FloatingWindow>;
+```
+
+### OverflowList
+
+Displays items and collapses overflowing ones into a single element.
+
+### Typography
+
+Generalized text component.
+
+### Collapse (horizontal)
+
+`Collapse` now supports `orientation="horizontal"` for animating width.
+
 ## Layout Components
 
 ### Container, Stack, Group, Flex
@@ -220,19 +258,22 @@ All components accept these props:
 ```tsx
 <Component
   // Margin & Padding
-  m="md" mt="xs" p="sm" px="md"
-  
+  m="md"
+  mt="xs"
+  p="sm"
+  px="md"
   // Colors
-  c="dimmed" bg="blue.1"
-  
+  c="dimmed"
+  bg="blue.1"
   // Typography
-  fw={500} fz="sm"
-  
+  fw={500}
+  fz="sm"
   // Dimensions
-  w={200} h="100%" maw={500}
-  
+  w={200}
+  h="100%"
+  maw={500}
   // Responsive
-  p={{ base: 'xs', sm: 'md', lg: 'xl' }}
+  p={{ base: "xs", sm: "md", lg: "xl" }}
 />
 ```
 

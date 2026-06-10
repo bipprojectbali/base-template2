@@ -2,13 +2,29 @@
 name: mantine-dev
 description: "Mantine UI library for React: 100+ components, hooks, forms, theming, dark mode, CSS modules, and Vite/TypeScript setup. Use when building React applications with Mantine components, configuring theming/dark mode, or working with Mantine hooks and forms. Keywords: Mantine, React, UI components, CSS modules, theming."
 metadata:
-  version: "8.3.18"
-  release_date: "2026-03-17"
+  version: "9.2.2"
+  release_date: "2026-05-27"
 ---
 
 # Mantine UI Library
 
 Mantine is a fully-featured React components library with TypeScript support. It provides 100+ hooks and components with native dark mode, CSS-in-JS via CSS modules, and excellent accessibility.
+
+## v9.2.2 Highlights
+
+- Accessibility fixes landed across selection controls and sliders: `Checkbox`, `Radio`, and `Switch` now wire error ids into `aria-describedby`, while `Slider` and `RangeSlider` support `aria-valuetext`.
+- Overlay/input behavior was refined with submenu safe polygon support, duplicate modal-id fixes, PinInput keyboard fixes, and ScrollArea/TreeSelect interaction fixes.
+- Patch fixes in `9.2.2` cover `Pill` overflow, `Input` sections under local `dir` overrides, `Select` clear buttons for falsy primitive values, Modal/Drawer/Spotlight attribute types, and safer `Menu.Sub` safe-area polygon option forwarding.
+- `@mantine/hooks` `use-mask` now preserves undo and cursor position across paste/cut flows, and `@mantine/tiptap` controls avoid errors after the editor is destroyed or not initialized.
+- Forms and theming were hardened: `@mantine/form` handlers are more stable, default validators no longer force async results unexpectedly, and `mergeMantineTheme` no longer mutates `DEFAULT_THEME.headings`.
+- `@mantine/schedule` continues to mature with better multi-day overlap rendering and corrected positioning for `intervalMinutes={60}`.
+
+## v9.0 Breaking Changes
+
+- **React 19.2+** required for all `@mantine/*` packages
+- **Tiptap 3+** required for `@mantine/tiptap`
+- **Recharts 3+** required for `@mantine/charts` (no migration needed)
+- Follow the official [8.x → 9.x migration guide](https://mantine.dev/changelog/9-0-0/) for full details
 
 ## Focus
 
@@ -117,6 +133,7 @@ Many components support `component` prop to render as different elements.
 - [components.md](references/components.md) — Core UI components patterns
 - [hooks.md](references/hooks.md) — @mantine/hooks utility hooks
 - [forms.md](references/forms.md) — @mantine/form, useForm, validation
+- [schedule.md](references/schedule.md) — @mantine/schedule calendar scheduling
 
 ### Development
 
