@@ -5,6 +5,7 @@ import { Notifications } from '@mantine/notifications'
 import '@mantine/notifications/styles.css'
 import { QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
+import { WhatsNewModal } from './components/WhatsNewModal'
 import { router } from './router'
 
 export class UnauthorizedError extends Error {
@@ -40,6 +41,7 @@ export function App() {
         <Notifications position="top-right" />
         <ModalsProvider>
           <QueryClientProvider client={queryClient}>
+            <WhatsNewModal />
             <RouterProvider router={router} context={{ queryClient }} />
           </QueryClientProvider>
         </ModalsProvider>

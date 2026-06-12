@@ -14,6 +14,7 @@ import { swaggerPlugin } from './lib/swagger-config'
 import { adminInfoRouter } from './routes/admin/info'
 import { adminLogsRouter } from './routes/admin/logs'
 import { adminUsersRouter } from './routes/admin/users'
+import { changelogRouter } from './routes/changelog'
 import { devAuthRouter } from './routes/dev-auth'
 import { ticketsRouter } from './routes/tickets'
 
@@ -42,6 +43,7 @@ export function createApp() {
       .use(adminLogsRouter)
       .use(adminInfoRouter)
       .use(ticketsRouter)
+      .use(changelogRouter)
 
       // ─── Global Error Handler ──────────────────────────────
       .onError(({ code, error, request }) => {

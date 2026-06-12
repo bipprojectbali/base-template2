@@ -44,6 +44,7 @@ Frontend component: `src/frontend/components/TicketsPanel.tsx` — shared betwee
 
 - `GET /health` — `{ status: 'ok' }`
 - `GET /api/version` — `{ name, version }` from package.json
+- `GET /api/changelog` — latest changelog entry as JSON (`{ version, date, sections }`). Pass `?all=true` for all versions.
 - `GET /api/hello` / `PUT /api/hello` / `GET /api/hello/:name`
 
 ## WebSocket

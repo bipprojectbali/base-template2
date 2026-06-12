@@ -35,6 +35,7 @@ Each file exports a named `*Route` const via `createRoute`. Never use `createFil
 
 - `ThemeToggle.tsx` — dark/light toggle, used across all pages
 - `TicketsPanel.tsx` — shared between `/dev` and `/dashboard`, QC-scoped when role=QC
+- `WhatsNewModal.tsx` — "What's New" modal shown on app load when version changes. Compares `/api/version` vs `localStorage.last_seen_version`; fetches `/api/changelog` and shows a Mantine modal with Added/Changed/Fixed/Removed sections. Dismissed version is saved to `localStorage`.
 - `NotFound.tsx` — 404 page
 - `ErrorPage.tsx` — error boundary
 

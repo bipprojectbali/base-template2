@@ -32,11 +32,13 @@ import {
   TbMoon,
   TbReportAnalytics,
   TbSettings,
+  TbSparkles,
   TbSun,
   TbUser,
 } from 'react-icons/tb'
 import { TicketsPanel } from '@/frontend/components/TicketsPanel'
 import { UserAvatar } from '@/frontend/components/UserAvatar'
+import { openWhatsNew } from '@/frontend/components/WhatsNewModal'
 import { useLogout, useSession } from '@/frontend/hooks/useAuth'
 import { authClient } from '@/lib/auth-client'
 import { rootRoute } from './__root'
@@ -286,6 +288,9 @@ function DashboardPage() {
                     <Menu.Item leftSection={<TbUser size={14} />} component="a" href="/profile">
                       Profile
                     </Menu.Item>
+                    <Menu.Item leftSection={<TbSparkles size={14} />} onClick={openWhatsNew}>
+                      Apa yang baru?
+                    </Menu.Item>
                     <Menu.Divider />
                     <Menu.Item color="red" leftSection={<TbLogout size={14} />} onClick={confirmLogout}>
                       Logout
@@ -324,6 +329,9 @@ function DashboardPage() {
                     </Menu.Item>
                     <Menu.Item leftSection={<TbUser size={14} />} component="a" href="/profile">
                       Profile
+                    </Menu.Item>
+                    <Menu.Item leftSection={<TbSparkles size={14} />} onClick={openWhatsNew}>
+                      Apa yang baru?
                     </Menu.Item>
                     <Menu.Divider />
                     <Menu.Item color="red" leftSection={<TbLogout size={14} />} onClick={confirmLogout}>
