@@ -250,6 +250,32 @@ function DevPage() {
               mb={4}
             />
           )}
+
+          {collapsed ? (
+            <Tooltip label="Pembaruan" position="right">
+              <ActionIcon
+                variant="subtle"
+                color="teal"
+                size="lg"
+                mb={4}
+                style={{ width: '100%' }}
+                component="a"
+                href="/changelog"
+              >
+                <TbSparkles size={18} />
+              </ActionIcon>
+            </Tooltip>
+          ) : (
+            <NavLink
+              label="Pembaruan"
+              leftSection={<TbSparkles size={18} />}
+              rightSection={<TbChevronRight size={14} />}
+              component="a"
+              href="/changelog"
+              variant="light"
+              mb={4}
+            />
+          )}
         </AppShell.Section>
 
         <AppShell.Section>

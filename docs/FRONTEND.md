@@ -21,6 +21,7 @@ Each file exports a named `*Route` const via `createRoute`. Never use `createFil
 | `dashboard.tsx` | `dashboardRoute` | `/dashboard` | ADMIN+QC, `validateSearch` for `?tab=` |
 | `profile.tsx` | `profileRoute` | `/profile` | authenticated |
 | `blocked.tsx` | `blockedRoute` | `/blocked` | authenticated |
+| `changelog.tsx` | `changelogRoute` | `/changelog` | authenticated — full version history from `GET /api/changelog?all=true` |
 
 **Rule:** new route → (1) create file, (2) export `*Route` via `createRoute`, (3) add to `router.ts` `addChildren([...])`.
 
