@@ -20,6 +20,16 @@ const InspectorWrapper = import.meta.env?.DEV
   ? (await import('./frontend/DevInspector')).DevInspector
   : ({ children }: { children: ReactNode }) => <>{children}</>
 
+// Agentation UI annotation tool — dev only, tree-shaken di production
+if (import.meta.env?.DEV) {
+  const { Agentation } = await import('agentation')
+  const { createElement } = await import('react')
+  const { createRoot } = await import('react-dom/client')
+  const container = document.createElement('div')
+  document.body.appendChild(container)
+  createRoot(container).render(createElement(Agentation))
+}
+
 // Remove splash screen after React mounts
 function removeSplash() {
   const splash = document.getElementById('splash')

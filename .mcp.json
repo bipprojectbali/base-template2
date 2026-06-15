@@ -1,5 +1,9 @@
 {
   "mcpServers": {
+    "agentation": {
+      "command": "npx",
+      "args": ["-y", "agentation-mcp", "server"]
+    },
     "base-template-deploy-stg": {
       "command": "bun",
       "args": ["run", "scripts/mcp/deploy.ts"],
