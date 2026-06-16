@@ -47,3 +47,9 @@ x.sh
 x.yml
 tasks/
 SOLUSI/
+
+# QA session artifacts — generated per-session, tidak di-commit
+# Hanya README.md dan screenshot.sh yang tetap di-track
+qa/*
+!qa/README.md
+!qa/screenshot.sh
