@@ -30,15 +30,6 @@ if (import.meta.env?.DEV) {
   createRoot(container).render(createElement(Agentation))
 }
 
-// Remove splash screen after React mounts
-function removeSplash() {
-  const splash = document.getElementById('splash')
-  if (splash) {
-    splash.classList.add('fade-out')
-    setTimeout(() => splash.remove(), 300)
-  }
-}
-
 const elem = document.getElementById('root')!
 const app = (
   <InspectorWrapper>
@@ -53,5 +44,3 @@ if (import.meta.hot) {
 } else {
   createRoot(elem).render(app)
 }
-
-removeSplash()
