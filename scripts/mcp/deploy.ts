@@ -45,7 +45,7 @@ server.registerTool(
   {
     title: 'Preflight scan',
     description: 'Scan credential leak, sensitive files, dan migrasi — tanpa melakukan deploy.',
-    inputSchema: { branch: z.string().default(ENV).describe('Branch target, default: stg') },
+    inputSchema: z.object({ branch: z.string().default(ENV).describe('Branch target, default: stg') }),
   },
   async ({ branch }) => {
     const result = runPreflight(branch)
@@ -83,7 +83,7 @@ server.registerTool(
   {
     title: 'Check version',
     description: 'Bandingkan versi lokal (package.json) vs versi live di STG (/api/version).',
-    inputSchema: {},
+    inputSchema: z.object({}),
   },
   async () => {
     const local = readVersion()
@@ -120,7 +120,7 @@ server.registerTool(
   {
     title: 'Deploy status',
     description: 'Cek status workflow GitHub Actions terakhir (publish + re-pull).',
-    inputSchema: { limit: z.number().int().min(1).max(10).default(3) },
+    inputSchema: z.object({ limit: z.number().int().min(1).max(10).default(3) }),
   },
   async ({ limit }) => {
     if (!GH_TOKEN) {
@@ -163,12 +163,12 @@ server.registerTool(
       '7. Poll sampai deploy selesai',
       '8. Verify /api/version cocok dengan versi baru',
     ].join('\n'),
-    inputSchema: {
+    inputSchema: z.object({
       bump: z.enum(['patch', 'minor', 'major']).default('patch').describe('Tipe version bump'),
       message: z.string().optional().describe('Custom commit message (opsional, default: chore: bump vX.X.X)'),
       skip_preflight: z.boolean().default(false).describe('Skip credential scan — gunakan hanya jika yakin aman'),
       branch: z.string().default(ENV).describe('Branch target, default: stg'),
-    },
+    }),
   },
   async (params) => runDeployPipeline(params, deployConfig),
 )

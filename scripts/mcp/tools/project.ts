@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { z } from 'zod'
 import { scanFileHealth } from '../../../src/lib/file-health-scanner'
 import { ROUTES_CATALOG } from '../../../src/lib/routes-catalog'
 import { parseSchema } from '../../../src/lib/schema-parser'
@@ -14,7 +15,7 @@ export const projectTools: ToolModule = {
       {
         title: 'Project routes',
         description: 'All HTTP + WS + frontend routes with auth level and category',
-        inputSchema: {},
+        inputSchema: z.object({}),
       },
       async () => {
         const byMethod: Record<string, number> = {}
@@ -37,7 +38,7 @@ export const projectTools: ToolModule = {
       {
         title: 'Prisma schema',
         description: 'Parsed Prisma schema (models, enums, relations)',
-        inputSchema: {},
+        inputSchema: z.object({}),
       },
       async () => {
         const path = join(process.cwd(), 'prisma/schema.prisma')
@@ -52,7 +53,7 @@ export const projectTools: ToolModule = {
       {
         title: 'NPM dependencies',
         description: 'Runtime and dev dependencies from package.json',
-        inputSchema: {},
+        inputSchema: z.object({}),
       },
       async () => {
         const pkgPath = join(process.cwd(), 'package.json')
@@ -77,7 +78,7 @@ export const projectTools: ToolModule = {
       {
         title: 'Prisma migrations',
         description: 'Timeline of Prisma migrations with SQL snippet',
-        inputSchema: {},
+        inputSchema: z.object({}),
       },
       async () => {
         const dir = join(process.cwd(), 'prisma/migrations')
@@ -108,7 +109,7 @@ export const projectTools: ToolModule = {
       {
         title: 'Environment variables',
         description: 'Environment variables referenced in src/lib/env.ts with set/unset status',
-        inputSchema: {},
+        inputSchema: z.object({}),
       },
       async () => {
         const envTs = readFileSync(join(process.cwd(), 'src/lib/env.ts'), 'utf-8')
@@ -141,7 +142,7 @@ export const projectTools: ToolModule = {
         title: 'File health scan',
         description:
           'Scan project files (src/, prisma/, tests/, scripts/, docs/) and report line/char counts vs limits in docs/FILE-HEALTH.md. Returns status (ok/warn/critical/exempt) per file plus worst offenders. Use this to detect files that should be split.',
-        inputSchema: {},
+        inputSchema: z.object({}),
       },
       async () => {
         const result = await scanFileHealth()
@@ -157,7 +158,7 @@ export const projectTools: ToolModule = {
       {
         title: 'Project file structure',
         description: 'Scan src/ prisma/ tests/ directories; return file list with line counts',
-        inputSchema: {},
+        inputSchema: z.object({}),
       },
       async () => {
         const root = process.cwd()

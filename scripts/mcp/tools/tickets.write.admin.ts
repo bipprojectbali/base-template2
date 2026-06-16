@@ -10,10 +10,10 @@ export function registerWriteAdminTools(server: McpServer) {
     {
       title: 'Close ticket (QC)',
       description: 'Close a ticket (QC action). Typically used from READY_FOR_QC after verification.',
-      inputSchema: {
+      inputSchema: z.object({
         id: z.string(),
         comment: z.string().optional().describe('Optional closing comment'),
-      },
+      }),
     },
     async ({ id, comment }) => {
       const ticket = await prisma.ticket.findUnique({ where: { id } })
@@ -40,10 +40,10 @@ export function registerWriteAdminTools(server: McpServer) {
     {
       title: 'Reopen ticket (QC)',
       description: "Reopen a CLOSED or READY_FOR_QC ticket — e.g. bug not actually fixed.",
-      inputSchema: {
+      inputSchema: z.object({
         id: z.string(),
         reason: z.string().min(1).describe('Why reopening — required for accountability'),
-      },
+      }),
     },
     async ({ id, reason }) => {
       const ticket = await prisma.ticket.findUnique({ where: { id } })
@@ -70,7 +70,7 @@ export function registerWriteAdminTools(server: McpServer) {
       title: 'Update ticket fields',
       description:
         'Update title, description, priority, route, or assignee. Does not change status — use dedicated tools for that.',
-      inputSchema: {
+      inputSchema: z.object({
         id: z.string(),
         title: z.string().optional(),
         description: z.string().optional(),
@@ -82,7 +82,7 @@ export function registerWriteAdminTools(server: McpServer) {
           .nullable()
           .optional()
           .describe('Email to assign to, or null to unassign'),
-      },
+      }),
     },
     async ({ id, title, description, priority, route, assigneeEmail }) => {
       const ticket = await prisma.ticket.findUnique({ where: { id } })
@@ -113,12 +113,12 @@ export function registerWriteAdminTools(server: McpServer) {
       title: 'Mark ticket ready for QC',
       description:
         'Move ticket to READY_FOR_QC with a summary comment and (optional) commit hash + test log evidence. Only QC can close afterwards.',
-      inputSchema: {
+      inputSchema: z.object({
         id: z.string(),
         summary: z.string().min(1).describe('What was fixed and how you verified it'),
         commitHash: z.string().optional(),
         testLog: z.string().optional().describe('Playwright test log path or URL'),
-      },
+      }),
     },
     async ({ id, summary, commitHash, testLog }) => {
       const ticket = await prisma.ticket.findUnique({ where: { id } })

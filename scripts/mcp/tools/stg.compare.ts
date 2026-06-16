@@ -10,10 +10,10 @@ export function registerCompareTools(server: McpServer) {
       title: 'STG vs Local: Compare API routes',
       description:
         'Fetch route metadata from both STG and local, then return a diff summary. Helps detect missing or extra routes after a deploy.',
-      inputSchema: {
+      inputSchema: z.object({
         localBaseUrl: z.string().default('http://localhost:3111').describe('Local dev server base URL'),
         localSecret: z.string().optional().describe('MCP_SECRET for local (defaults to same as STG secret)'),
-      },
+      }),
     },
     async ({ localBaseUrl, localSecret }) => {
       const localUrl = localBaseUrl.replace(/\/$/, '')
@@ -48,10 +48,10 @@ export function registerCompareTools(server: McpServer) {
       title: 'STG vs Local: Compare env vars',
       description:
         'Fetch env-map (set/unset status) from STG and local, then diff which vars are missing on either side.',
-      inputSchema: {
+      inputSchema: z.object({
         localBaseUrl: z.string().default('http://localhost:3111').describe('Local dev server base URL'),
         localSecret: z.string().optional(),
-      },
+      }),
     },
     async ({ localBaseUrl, localSecret }) => {
       const localUrl = localBaseUrl.replace(/\/$/, '')
@@ -88,10 +88,10 @@ export function registerCompareTools(server: McpServer) {
       title: 'STG vs Local: Compare DB schema',
       description:
         'Fetch parsed Prisma schema from both STG and local, diff model/field lists. Useful to detect missing migrations on STG.',
-      inputSchema: {
+      inputSchema: z.object({
         localBaseUrl: z.string().default('http://localhost:3111'),
         localSecret: z.string().optional(),
-      },
+      }),
     },
     async ({ localBaseUrl, localSecret }) => {
       const localUrl = localBaseUrl.replace(/\/$/, '')
@@ -134,10 +134,10 @@ export function registerCompareTools(server: McpServer) {
       title: 'STG vs Local: Compare migrations',
       description:
         'Fetch migration timeline from both STG and local, show which are applied on STG but not local and vice versa.',
-      inputSchema: {
+      inputSchema: z.object({
         localBaseUrl: z.string().default('http://localhost:3111'),
         localSecret: z.string().optional(),
-      },
+      }),
     },
     async ({ localBaseUrl, localSecret }) => {
       const localUrl = localBaseUrl.replace(/\/$/, '')
@@ -170,10 +170,10 @@ export function registerCompareTools(server: McpServer) {
       title: 'STG vs Local: Compare user count & roles',
       description:
         'Quick summary of user counts per role on STG vs local. Useful to spot if seed data or migrations diverged.',
-      inputSchema: {
+      inputSchema: z.object({
         localBaseUrl: z.string().default('http://localhost:3111'),
         localSecret: z.string().optional(),
-      },
+      }),
     },
     async ({ localBaseUrl, localSecret }) => {
       const localUrl = localBaseUrl.replace(/\/$/, '')

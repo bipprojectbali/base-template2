@@ -65,7 +65,7 @@ export const dashboardRoute = createRoute({
         },
       })
       if (!data?.user) throw redirect({ to: '/login' })
-      const user = data.user as any
+      const user = data.user
       if (user.blocked) throw redirect({ to: '/blocked' })
       if (user.role === 'USER') throw redirect({ to: '/profile' })
       const search = window.location.search

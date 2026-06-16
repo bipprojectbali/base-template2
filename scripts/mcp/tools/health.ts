@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { prisma } from '../../../src/lib/db'
 import { redis } from '../../../src/lib/redis'
 import { jsonText, type ToolModule } from './shared'
@@ -11,7 +12,7 @@ export const healthTools: ToolModule = {
       {
         title: 'Full health check',
         description: 'Ping database + Redis, report uptime and environment',
-        inputSchema: {},
+        inputSchema: z.object({}),
       },
       async () => {
         const started = Date.now()

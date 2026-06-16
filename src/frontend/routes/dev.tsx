@@ -85,7 +85,7 @@ export const devRoute = createRoute({
         },
       })
       if (!data?.user) throw redirect({ to: '/login' })
-      const user = data.user as any
+      const user = data.user
       if (user.blocked) throw redirect({ to: '/blocked' })
       if (user.role !== 'SUPER_ADMIN') throw redirect({ to: '/profile' })
     } catch (e) {

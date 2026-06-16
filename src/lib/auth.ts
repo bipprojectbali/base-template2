@@ -84,7 +84,8 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (userData) => {
-          if (env.SUPER_ADMIN_EMAILS.length > 0 && env.SUPER_ADMIN_EMAILS.includes((userData as any).email ?? '')) {
+          const email = (userData as { email?: string }).email ?? ''
+          if (env.SUPER_ADMIN_EMAILS.length > 0 && env.SUPER_ADMIN_EMAILS.includes(email)) {
             return { data: { ...userData, role: 'SUPER_ADMIN' } }
           }
         },

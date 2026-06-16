@@ -13,16 +13,6 @@ export interface User {
   image?: string | null
 }
 
-type SessionUser = {
-  id: string
-  name: string
-  email: string
-  role?: string
-  blocked?: boolean
-  image?: string | null
-  [key: string]: unknown
-}
-
 export function getDefaultRoute(role: Role): string {
   switch (role) {
     case 'SUPER_ADMIN':
@@ -38,7 +28,7 @@ export function getDefaultRoute(role: Role): string {
 
 export function useSession() {
   const session = authClient.useSession()
-  const user = session.data?.user as SessionUser | undefined
+  const user = session.data?.user
 
   return {
     data: user
@@ -47,8 +37,8 @@ export function useSession() {
             id: user.id,
             name: user.name,
             email: user.email,
-            role: (user.role as Role) ?? 'USER',
-            blocked: (user.blocked as boolean) ?? false,
+            role: (user.role ?? 'USER') as Role,
+            blocked: user.blocked ?? false,
             image: user.image ?? null,
           } satisfies User,
         }
@@ -72,9 +62,9 @@ export function useLogin() {
         throw new Error(result.error.message ?? 'Login gagal')
       }
 
-      const user = result.data?.user as SessionUser | undefined
+      const user = result.data?.user
       if (user) {
-        const role = (user.role as Role) ?? 'USER'
+        const role = (user.role ?? 'USER') as Role
         navigate({ to: getDefaultRoute(role) })
       }
 

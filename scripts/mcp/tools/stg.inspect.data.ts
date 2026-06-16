@@ -9,12 +9,12 @@ export function registerInspectDataTools(server: McpServer) {
       title: 'STG: App logs',
       description:
         'Tail the Redis app log buffer on staging. Use to see recent request/error activity in STG runtime.',
-      inputSchema: {
+      inputSchema: z.object({
         level: z.enum(['info', 'warn', 'error']).optional(),
         limit: z.number().int().min(1).max(500).default(100),
         afterId: z.number().int().optional(),
         search: z.string().optional().describe('Substring match on message'),
-      },
+      }),
     },
     async (input) =>
       stgResult(
@@ -30,12 +30,12 @@ export function registerInspectDataTools(server: McpServer) {
     {
       title: 'STG: Audit logs',
       description: 'Fetch audit trail from staging DB. Useful to see user login/logout/role events on STG.',
-      inputSchema: {
+      inputSchema: z.object({
         userId: z.string().optional(),
         action: z.string().optional(),
         sinceISO: z.string().optional(),
         limit: z.number().int().min(1).max(1000).default(100),
-      },
+      }),
     },
     async (input) =>
       stgResult(
@@ -52,12 +52,12 @@ export function registerInspectDataTools(server: McpServer) {
       title: 'STG: List users',
       description:
         'List all users on staging (role, blocked status, createdAt). Compare with local to spot data drift.',
-      inputSchema: {
+      inputSchema: z.object({
         role: z.enum(['USER', 'QC', 'ADMIN', 'SUPER_ADMIN']).optional(),
         blocked: z.boolean().optional(),
         search: z.string().optional().describe('Substring match on name or email'),
         limit: z.number().int().min(1).max(500).default(50),
-      },
+      }),
     },
     async (input) =>
       stgResult(
@@ -73,10 +73,10 @@ export function registerInspectDataTools(server: McpServer) {
     {
       title: 'STG: Get user',
       description: 'Fetch a single user by id or email on staging, including active session count.',
-      inputSchema: {
+      inputSchema: z.object({
         id: z.string().optional(),
         email: z.string().email().optional(),
-      },
+      }),
     },
     async (input) =>
       stgResult(
@@ -92,11 +92,11 @@ export function registerInspectDataTools(server: McpServer) {
     {
       title: 'STG: Sessions',
       description: 'List active sessions on staging. Useful to verify auth state or find stuck sessions.',
-      inputSchema: {
+      inputSchema: z.object({
         userId: z.string().optional(),
         active: z.boolean().optional().describe('true = not expired, false = expired'),
         limit: z.number().int().min(1).max(500).default(50),
-      },
+      }),
     },
     async (input) =>
       stgResult(
@@ -112,7 +112,7 @@ export function registerInspectDataTools(server: McpServer) {
     {
       title: 'STG: Online users',
       description: 'List currently connected users (WebSocket presence) on staging.',
-      inputSchema: {},
+      inputSchema: z.object({}),
     },
     async () =>
       stgResult(
@@ -128,7 +128,7 @@ export function registerInspectDataTools(server: McpServer) {
     {
       title: 'STG: Redis info',
       description: 'Ping Redis on staging and return latency.',
-      inputSchema: {},
+      inputSchema: z.object({}),
     },
     async () =>
       stgResult(
@@ -144,7 +144,7 @@ export function registerInspectDataTools(server: McpServer) {
     {
       title: 'STG: Redis GET',
       description: 'Get a Redis key value on staging. Useful to inspect session cache or feature flags.',
-      inputSchema: { key: z.string() },
+      inputSchema: z.object({ key: z.string() }),
     },
     async (input) =>
       stgResult(
@@ -160,10 +160,10 @@ export function registerInspectDataTools(server: McpServer) {
     {
       title: 'STG: Redis KEYS',
       description: 'List Redis keys matching a pattern on staging.',
-      inputSchema: {
+      inputSchema: z.object({
         pattern: z.string().default('*'),
         limit: z.number().int().min(1).max(1000).default(200),
-      },
+      }),
     },
     async (input) =>
       stgResult(
@@ -179,13 +179,13 @@ export function registerInspectDataTools(server: McpServer) {
     {
       title: 'STG: List tickets',
       description: 'List tickets on staging. Use to compare ticket state between STG and local.',
-      inputSchema: {
+      inputSchema: z.object({
         status: z
           .enum(['OPEN', 'IN_PROGRESS', 'READY_FOR_QC', 'REOPENED', 'CLOSED', 'ACTIVE', 'ALL'])
           .default('ACTIVE'),
         priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
         limit: z.number().int().min(1).max(200).default(50),
-      },
+      }),
     },
     async (input) =>
       stgResult(
@@ -201,7 +201,7 @@ export function registerInspectDataTools(server: McpServer) {
     {
       title: 'STG: Get ticket',
       description: 'Fetch a ticket with comments and evidence from staging.',
-      inputSchema: { id: z.string() },
+      inputSchema: z.object({ id: z.string() }),
     },
     async (input) =>
       stgResult(

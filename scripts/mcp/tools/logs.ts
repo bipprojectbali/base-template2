@@ -12,12 +12,12 @@ export const logsReadonly: ToolModule = {
       {
         title: 'App logs',
         description: 'Tail the Redis-backed app log buffer (last 500 entries)',
-        inputSchema: {
+        inputSchema: z.object({
           level: z.enum(['info', 'warn', 'error']).optional(),
           limit: z.number().int().min(1).max(500).default(100),
           afterId: z.number().int().optional(),
           search: z.string().optional().describe('Substring match on message'),
-        },
+        }),
       },
       async ({ level, limit, afterId, search }) => {
         let logs = await getAppLogs({ level, limit, afterId })
@@ -34,12 +34,12 @@ export const logsReadonly: ToolModule = {
       {
         title: 'Audit logs',
         description: 'Persistent audit trail from the database',
-        inputSchema: {
+        inputSchema: z.object({
           userId: z.string().optional(),
           action: z.string().optional(),
           sinceISO: z.string().optional(),
           limit: z.number().int().min(1).max(1000).default(100),
-        },
+        }),
       },
       async ({ userId, action, sinceISO, limit }) => {
         const where: Record<string, unknown> = {}
@@ -66,7 +66,7 @@ export const logsAdmin: ToolModule = {
       {
         title: 'Clear app logs',
         description: 'Wipe the Redis app log buffer',
-        inputSchema: {},
+        inputSchema: z.object({}),
       },
       async () => {
         await clearAppLogs()
@@ -79,9 +79,9 @@ export const logsAdmin: ToolModule = {
       {
         title: 'Clear audit logs',
         description: 'Delete all audit log rows from the database',
-        inputSchema: {
+        inputSchema: z.object({
           confirm: z.literal(true).describe('Must be true to execute'),
-        },
+        }),
       },
       async ({ confirm }) => {
         if (!confirm) return jsonText({ error: 'confirm must be true' })

@@ -72,8 +72,6 @@ await prisma.session.deleteMany(...)
 
 Kapan wajib `$transaction`: update + delete bersamaan, create + relasi, bulk upsert yang harus konsisten.
 
-> **Catatan project ini:** `PUT /api/admin/users/:id/block` saat ini belum pakai `$transaction` —
-> kandidat untuk di-fix saat menyentuh route tersebut.
 
 ### 1D. Pagination default di semua findMany
 

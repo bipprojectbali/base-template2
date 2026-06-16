@@ -83,7 +83,9 @@ export const adminUsersWriteRouter = new Elysia({ tags: ['Admin — Users'] })
         ...(blocked ? [prisma.session.deleteMany({ where: { userId: params.id } })] : []),
       ])
       for (const token of sessionTokens) {
-        await redis.del(`ba:kv:${token}`).catch(() => {})
+        await redis.del(`ba:kv:${token}`).catch((err: unknown) => {
+          appLog('warn', `Failed to delete Redis session token on block: ${token}`, String(err))
+        })
       }
       const action = blocked ? 'BLOCKED' : 'UNBLOCKED'
       audit(params.id, action, `by ${authUser!.id}`, ip)

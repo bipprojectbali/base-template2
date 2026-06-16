@@ -50,7 +50,7 @@ export const profileRoute = createRoute({
         },
       })
       if (!data?.user) throw redirect({ to: '/login' })
-      const user = data.user as any
+      const user = data.user
       if (user.blocked) throw redirect({ to: '/blocked' })
     } catch (e) {
       if (e instanceof Error) throw redirect({ to: '/login' })

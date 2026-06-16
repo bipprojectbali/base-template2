@@ -11,12 +11,12 @@ export const dbTools: ToolModule = {
       {
         title: 'List users',
         description: 'List users with optional filters by role and blocked status',
-        inputSchema: {
+        inputSchema: z.object({
           role: z.enum(['USER', 'ADMIN', 'SUPER_ADMIN']).optional(),
           blocked: z.boolean().optional(),
           limit: z.number().int().min(1).max(500).default(50),
           search: z.string().optional().describe('Substring match on name or email'),
-        },
+        }),
       },
       async ({ role, blocked, limit, search }) => {
         const where: Record<string, unknown> = {}
@@ -43,10 +43,10 @@ export const dbTools: ToolModule = {
       {
         title: 'Get user',
         description: 'Fetch a single user by id or email, including active session count',
-        inputSchema: {
+        inputSchema: z.object({
           id: z.string().optional(),
           email: z.string().email().optional(),
-        },
+        }),
       },
       async ({ id, email }) => {
         if (!id && !email) {
@@ -67,11 +67,11 @@ export const dbTools: ToolModule = {
       {
         title: 'List sessions',
         description: 'List sessions with optional filters',
-        inputSchema: {
+        inputSchema: z.object({
           userId: z.string().optional(),
           active: z.boolean().optional().describe('true = not expired, false = expired'),
           limit: z.number().int().min(1).max(500).default(50),
-        },
+        }),
       },
       async ({ userId, active, limit }) => {
         const where: Record<string, unknown> = {}
@@ -106,12 +106,12 @@ export const dbTools: ToolModule = {
       {
         title: 'List audit logs',
         description: 'Recent audit log entries, filterable by user or action',
-        inputSchema: {
+        inputSchema: z.object({
           userId: z.string().optional(),
           action: z.string().optional().describe('Exact action match, e.g. LOGIN, LOGOUT, ROLE_CHANGED'),
           sinceISO: z.string().optional().describe('ISO timestamp lower bound'),
           limit: z.number().int().min(1).max(1000).default(100),
-        },
+        }),
       },
       async ({ userId, action, sinceISO, limit }) => {
         const where: Record<string, unknown> = {}
@@ -132,7 +132,7 @@ export const dbTools: ToolModule = {
       {
         title: 'Table counts',
         description: 'Row counts for each primary table',
-        inputSchema: {},
+        inputSchema: z.object({}),
       },
       async () => {
         const [users, sessions, auditLogs, activeSessions, blockedUsers] = await Promise.all([

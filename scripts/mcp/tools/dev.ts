@@ -47,9 +47,9 @@ export const devTools: ToolModule = {
       {
         title: 'TypeScript typecheck',
         description: 'Run `bun run typecheck` (tsc --noEmit)',
-        inputSchema: {
+        inputSchema: z.object({
           timeoutMs: z.number().int().min(1000).max(600_000).default(120_000),
-        },
+        }),
       },
       async ({ timeoutMs }) => jsonText(await run(['bun', 'run', 'typecheck'], timeoutMs)),
     )
@@ -59,10 +59,10 @@ export const devTools: ToolModule = {
       {
         title: 'Biome lint',
         description: 'Run `bun run lint` or `lint:fix`',
-        inputSchema: {
+        inputSchema: z.object({
           fix: z.boolean().default(false),
           timeoutMs: z.number().int().min(1000).max(300_000).default(60_000),
-        },
+        }),
       },
       async ({ fix, timeoutMs }) => jsonText(await run(['bun', 'run', fix ? 'lint:fix' : 'lint'], timeoutMs)),
     )
@@ -72,11 +72,11 @@ export const devTools: ToolModule = {
       {
         title: 'Run tests',
         description: 'Run unit, integration, or all tests',
-        inputSchema: {
+        inputSchema: z.object({
           scope: z.enum(['unit', 'integration', 'all']).default('all'),
           pattern: z.string().optional().describe('Test name pattern (passed as --test-name-pattern)'),
           timeoutMs: z.number().int().min(1000).max(600_000).default(180_000),
-        },
+        }),
       },
       async ({ scope, pattern, timeoutMs }) => {
         const script = scope === 'all' ? 'test' : `test:${scope}`
@@ -91,10 +91,10 @@ export const devTools: ToolModule = {
       {
         title: 'Prisma migrate dev',
         description: 'Create and apply a new Prisma migration',
-        inputSchema: {
+        inputSchema: z.object({
           name: z.string().min(1).describe('Migration name (snake_case)'),
           timeoutMs: z.number().int().min(1000).max(300_000).default(120_000),
-        },
+        }),
       },
       async ({ name, timeoutMs }) => jsonText(await run(['bunx', 'prisma', 'migrate', 'dev', '--name', name], timeoutMs)),
     )
@@ -104,9 +104,9 @@ export const devTools: ToolModule = {
       {
         title: 'Seed database',
         description: 'Run `bun run db:seed`',
-        inputSchema: {
+        inputSchema: z.object({
           timeoutMs: z.number().int().min(1000).max(300_000).default(60_000),
-        },
+        }),
       },
       async ({ timeoutMs }) => jsonText(await run(['bun', 'run', 'db:seed'], timeoutMs)),
     )
@@ -116,9 +116,9 @@ export const devTools: ToolModule = {
       {
         title: 'Generate Prisma client',
         description: 'Run `bunx prisma generate`',
-        inputSchema: {
+        inputSchema: z.object({
           timeoutMs: z.number().int().min(1000).max(300_000).default(60_000),
-        },
+        }),
       },
       async ({ timeoutMs }) => jsonText(await run(['bunx', 'prisma', 'generate'], timeoutMs)),
     )

@@ -22,11 +22,11 @@ export const codeTools: ToolModule = {
       {
         title: 'Read file',
         description: 'Read a project file by relative path (limited to project root). Returns contents with line range support.',
-        inputSchema: {
+        inputSchema: z.object({
           path: z.string().describe('Relative path from project root'),
           offset: z.number().int().min(1).optional().describe('1-based line to start at'),
           limit: z.number().int().min(1).max(5000).optional(),
-        },
+        }),
       },
       async ({ path: rel, offset, limit }) => {
         try {
@@ -57,12 +57,12 @@ export const codeTools: ToolModule = {
       {
         title: 'Grep project',
         description: 'Search files for a regex pattern inside the project. Uses ripgrep if available, falls back to Bun subprocess.',
-        inputSchema: {
+        inputSchema: z.object({
           pattern: z.string(),
           glob: z.string().optional().describe('Glob filter, e.g. src/**/*.ts'),
           maxResults: z.number().int().min(1).max(500).default(100),
           caseInsensitive: z.boolean().default(false),
-        },
+        }),
       },
       async ({ pattern, glob, maxResults, caseInsensitive }) => {
         const args = ['--json', '--max-count', '5', '-n', '--max-filesize', '1M']
@@ -104,7 +104,7 @@ export const codeTools: ToolModule = {
       {
         title: 'Stat file',
         description: 'Return size, line count, and mtime for a file',
-        inputSchema: { path: z.string() },
+        inputSchema: z.object({ path: z.string() }),
       },
       async ({ path: rel }) => {
         try {

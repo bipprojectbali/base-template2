@@ -10,7 +10,7 @@ export function registerReadTools(server: McpServer) {
     {
       title: 'List tickets',
       description: 'List tickets with optional filters. Default: OPEN + IN_PROGRESS + REOPENED (active only).',
-      inputSchema: {
+      inputSchema: z.object({
         status: z
           .enum(['OPEN', 'IN_PROGRESS', 'READY_FOR_QC', 'REOPENED', 'CLOSED', 'ACTIVE', 'ALL'])
           .default('ACTIVE'),
@@ -18,7 +18,7 @@ export function registerReadTools(server: McpServer) {
         assigneeId: z.string().optional(),
         mine: z.boolean().default(false).describe('Only tickets assigned to the Claude MCP user'),
         limit: z.number().int().min(1).max(200).default(50),
-      },
+      }),
     },
     async ({ status, priority, assigneeId, mine, limit }) => {
       const where: Record<string, unknown> = {}
@@ -53,7 +53,7 @@ export function registerReadTools(server: McpServer) {
     {
       title: 'Get ticket detail',
       description: 'Fetch full ticket with comments and evidence',
-      inputSchema: { id: z.string() },
+      inputSchema: z.object({ id: z.string() }),
     },
     async ({ id }) => {
       const ticket = await prisma.ticket.findUnique({

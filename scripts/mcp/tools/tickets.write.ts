@@ -11,7 +11,7 @@ export function registerWriteTools(server: McpServer) {
     {
       title: 'Claim ticket',
       description: 'Assign ticket to Claude MCP user and move status to IN_PROGRESS',
-      inputSchema: { id: z.string() },
+      inputSchema: z.object({ id: z.string() }),
     },
     async ({ id }) => {
       const ticket = await prisma.ticket.findUnique({ where: { id } })
@@ -35,7 +35,7 @@ export function registerWriteTools(server: McpServer) {
     {
       title: 'Comment on ticket',
       description: 'Add a comment to a ticket as Claude (MCP). Use for progress updates and questions.',
-      inputSchema: { id: z.string(), body: z.string().min(1) },
+      inputSchema: z.object({ id: z.string(), body: z.string().min(1) }),
     },
     async ({ id, body }) => {
       const ticket = await prisma.ticket.findUnique({ where: { id }, select: { id: true } })
@@ -53,12 +53,12 @@ export function registerWriteTools(server: McpServer) {
     {
       title: 'Attach evidence to ticket',
       description: 'Attach evidence: screenshot path, commit hash, test log URL, or Playwright trace.',
-      inputSchema: {
+      inputSchema: z.object({
         id: z.string(),
         kind: z.enum(['screenshot', 'commit', 'test_log', 'trace', 'other']),
         url: z.string().min(1).describe('File path, commit hash, or URL'),
         note: z.string().optional(),
-      },
+      }),
     },
     async ({ id, kind, url, note }) => {
       const ticket = await prisma.ticket.findUnique({ where: { id }, select: { id: true } })
@@ -76,7 +76,7 @@ export function registerWriteTools(server: McpServer) {
       title: 'Create ticket',
       description:
         'Create a new ticket. Reporter defaults to Claude MCP user unless reporterEmail is given (must match an existing user).',
-      inputSchema: {
+      inputSchema: z.object({
         title: z.string().min(1),
         description: z.string().min(1).describe('Markdown: repro steps, expected vs actual'),
         priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).default('MEDIUM'),
@@ -87,7 +87,7 @@ export function registerWriteTools(server: McpServer) {
           .optional()
           .describe('Email of reporter user (QC/ADMIN). Defaults to Claude MCP user.'),
         assigneeEmail: z.string().email().optional(),
-      },
+      }),
     },
     async ({ title, description, priority, route, reporterEmail, assigneeEmail }) => {
       const reporter = reporterEmail

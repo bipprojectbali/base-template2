@@ -16,10 +16,10 @@ export const adminTools: ToolModule = {
       {
         title: 'Change user role',
         description: 'Set role to USER, QC, or ADMIN. SUPER_ADMIN promotion must be done via env.',
-        inputSchema: {
+        inputSchema: z.object({
           userId: z.string(),
           role: z.enum(['USER', 'QC', 'ADMIN']),
-        },
+        }),
       },
       async ({ userId, role }) => {
         const user = await prisma.user.findUnique({ where: { id: userId } })
@@ -41,10 +41,10 @@ export const adminTools: ToolModule = {
       {
         title: 'Block user',
         description: 'Block a user and revoke all their sessions',
-        inputSchema: {
+        inputSchema: z.object({
           userId: z.string(),
           reason: z.string().optional(),
-        },
+        }),
       },
       async ({ userId, reason }) => {
         const user = await prisma.user.findUnique({ where: { id: userId } })
@@ -64,7 +64,7 @@ export const adminTools: ToolModule = {
       {
         title: 'Unblock user',
         description: 'Remove the blocked flag from a user',
-        inputSchema: { userId: z.string() },
+        inputSchema: z.object({ userId: z.string() }),
       },
       async ({ userId }) => {
         const user = await prisma.user.findUnique({ where: { id: userId } })
@@ -81,7 +81,7 @@ export const adminTools: ToolModule = {
       {
         title: 'Revoke user sessions',
         description: 'Delete all sessions for a user (force logout everywhere)',
-        inputSchema: { userId: z.string() },
+        inputSchema: z.object({ userId: z.string() }),
       },
       async ({ userId }) => {
         const { count } = await prisma.session.deleteMany({ where: { userId } })
@@ -96,12 +96,12 @@ export const adminTools: ToolModule = {
       {
         title: 'Create user',
         description: 'Create a new user with hashed password',
-        inputSchema: {
+        inputSchema: z.object({
           name: z.string().min(1),
           email: z.string().email(),
           password: z.string().min(6),
           role: z.enum(['USER', 'QC', 'ADMIN']).default('USER'),
-        },
+        }),
       },
       async ({ name, email, password, role }) => {
         const existing = await prisma.user.findUnique({ where: { email } })
@@ -122,11 +122,11 @@ export const adminTools: ToolModule = {
       {
         title: 'Reset password',
         description: 'Reset a user password (requires the new password). Revokes all sessions.',
-        inputSchema: {
+        inputSchema: z.object({
           userId: z.string(),
           newPassword: z.string().min(6),
           revokeSessions: z.boolean().default(true),
-        },
+        }),
       },
       async ({ userId, newPassword, revokeSessions }) => {
         const user = await prisma.user.findUnique({ where: { id: userId } })

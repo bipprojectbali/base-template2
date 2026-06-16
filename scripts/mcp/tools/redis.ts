@@ -11,7 +11,7 @@ export const redisTools: ToolModule = {
       {
         title: 'Redis GET',
         description: 'Get a string value by key',
-        inputSchema: { key: z.string() },
+        inputSchema: z.object({ key: z.string() }),
       },
       async ({ key }) => {
         const value = await redis.get(key)
@@ -24,11 +24,11 @@ export const redisTools: ToolModule = {
       {
         title: 'Redis SET',
         description: 'Set a string value. Optional TTL in seconds.',
-        inputSchema: {
+        inputSchema: z.object({
           key: z.string(),
           value: z.string(),
           ttlSeconds: z.number().int().min(1).optional(),
-        },
+        }),
       },
       async ({ key, value, ttlSeconds }) => {
         if (ttlSeconds) {
@@ -45,7 +45,7 @@ export const redisTools: ToolModule = {
       {
         title: 'Redis DEL',
         description: 'Delete one or more keys',
-        inputSchema: { keys: z.array(z.string()).min(1) },
+        inputSchema: z.object({ keys: z.array(z.string()).min(1) }),
       },
       async ({ keys }) => {
         let removed = 0
@@ -62,10 +62,10 @@ export const redisTools: ToolModule = {
       {
         title: 'Redis KEYS',
         description: 'List keys matching a pattern (use sparingly — O(N))',
-        inputSchema: {
+        inputSchema: z.object({
           pattern: z.string().default('*'),
           limit: z.number().int().min(1).max(1000).default(200),
-        },
+        }),
       },
       async ({ pattern, limit }) => {
         const keys = await redis.keys(pattern)
@@ -78,7 +78,7 @@ export const redisTools: ToolModule = {
       {
         title: 'Redis INFO',
         description: 'Return connection status and a ping round-trip',
-        inputSchema: {},
+        inputSchema: z.object({}),
       },
       async () => {
         const start = Date.now()

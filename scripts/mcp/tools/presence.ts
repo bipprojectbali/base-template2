@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { prisma } from '../../../src/lib/db'
 import { getOnlineUserIds } from '../../../src/lib/presence'
 import { jsonText, type ToolModule } from './shared'
@@ -11,7 +12,7 @@ export const presenceTools: ToolModule = {
       {
         title: 'Online users',
         description: 'List currently connected users (via WebSocket presence tracker)',
-        inputSchema: {},
+        inputSchema: z.object({}),
       },
       async () => {
         const ids = getOnlineUserIds()

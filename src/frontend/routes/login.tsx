@@ -22,7 +22,7 @@ import { FcGoogle } from 'react-icons/fc'
 import { TbAlertCircle, TbCheck, TbClock, TbLock, TbLogin, TbMail, TbShieldCheck, TbUsers } from 'react-icons/tb'
 import { Background3D } from '@/frontend/components/Background3D'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
-import { getDefaultRoute } from '@/frontend/hooks/useAuth'
+import { getDefaultRoute, type Role } from '@/frontend/hooks/useAuth'
 import { authClient } from '@/lib/auth-client'
 import { rootRoute } from './__root'
 
@@ -43,8 +43,8 @@ export const loginRoute = createRoute({
         },
       })
       if (data?.user) {
-        const user = data.user as any
-        throw redirect({ to: getDefaultRoute((user.role ?? 'USER') as any) })
+        const role = (data.user.role ?? 'USER') as Role
+        throw redirect({ to: getDefaultRoute(role) })
       }
     } catch (e) {
       if (e instanceof Error) return
@@ -75,9 +75,9 @@ function LoginPage() {
       return
     }
 
-    const user = result.data?.user as any
+    const user = result.data?.user
     if (user) {
-      window.location.href = getDefaultRoute((user.role ?? 'USER') as any)
+      window.location.href = getDefaultRoute((user.role ?? 'USER') as Role)
     }
     setIsLoading(false)
   }

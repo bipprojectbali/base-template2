@@ -10,7 +10,7 @@ export function registerInspectTools(server: McpServer) {
     {
       title: 'STG: Health check',
       description: 'Ping the staging runtime: DB + Redis + uptime. Use to verify STG is up before comparing with local.',
-      inputSchema: {},
+      inputSchema: z.object({}),
     },
     async () =>
       stgResult(
@@ -26,7 +26,7 @@ export function registerInspectTools(server: McpServer) {
     {
       title: 'STG: Ping /health',
       description: 'Simple GET /health check on staging. Fastest connectivity probe.',
-      inputSchema: {},
+      inputSchema: z.object({}),
     },
     async () => {
       const r = await stgFetch('/health')
@@ -40,12 +40,12 @@ export function registerInspectTools(server: McpServer) {
       title: 'STG: Raw API call',
       description:
         'Make an arbitrary HTTP request to staging. Use for endpoints not covered by other tools (e.g. /api/version, /api/admin/routes, custom routes).',
-      inputSchema: {
+      inputSchema: z.object({
         method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).default('GET'),
         path: z.string().describe('Path relative to BASE_URL, e.g. /api/version'),
         body: z.string().optional().describe('JSON body string for POST/PUT/PATCH'),
         bearerToken: z.string().optional().describe('Override Authorization header (e.g. user session token)'),
-      },
+      }),
     },
     async ({ method, path, body, bearerToken }) => {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -61,7 +61,7 @@ export function registerInspectTools(server: McpServer) {
       title: 'STG: File health scan',
       description:
         'Run file health scan on staging via /api/admin/file-health (SUPER_ADMIN cookie required, falls back to MCP bearer). Reports line/char counts vs limits in docs/FILE-HEALTH.md.',
-      inputSchema: {},
+      inputSchema: z.object({}),
     },
     async () => stgResult(await stgFetch('/api/admin/file-health')),
   )
@@ -71,7 +71,7 @@ export function registerInspectTools(server: McpServer) {
     {
       title: 'STG: DB table row counts',
       description: 'Row counts for each primary table on staging.',
-      inputSchema: {},
+      inputSchema: z.object({}),
     },
     async () =>
       stgResult(
