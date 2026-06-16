@@ -13,7 +13,7 @@ import {
   Title,
 } from '@mantine/core'
 import { useQuery } from '@tanstack/react-query'
-import { createRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { createRoute, redirect, useRouter } from '@tanstack/react-router'
 import { TbArrowLeft, TbSparkles } from 'react-icons/tb'
 import { authClient } from '@/lib/auth-client'
 import { rootRoute } from './__root'
@@ -55,7 +55,7 @@ const SECTION_COLOR: Record<string, string> = {
 }
 
 function ChangelogPage() {
-  const navigate = useNavigate()
+  const router = useRouter()
 
   const { data, isLoading, isError } = useQuery<ChangelogEntry[]>({
     queryKey: ['changelog', 'all'],
@@ -73,7 +73,7 @@ function ChangelogPage() {
     <Box mih="100vh" py="xl">
       <Container size="sm">
         <Stack gap="xl">
-          <Group gap="xs" style={{ cursor: 'pointer' }} onClick={() => navigate({ to: -1 as any })}>
+          <Group gap="xs" style={{ cursor: 'pointer' }} onClick={() => router.history.back()}>
             <TbArrowLeft size={16} />
             <Text size="sm" c="dimmed">
               Kembali
@@ -115,9 +115,7 @@ function ChangelogPage() {
           {entries.length > 0 && (
             <Timeline active={0} bulletSize={24} lineWidth={2}>
               {entries.map((entry, i) => {
-                const sections = Object.entries(entry.sections).filter(
-                  ([, items]) => items && items.length > 0,
-                )
+                const sections = Object.entries(entry.sections).filter(([, items]) => items && items.length > 0)
                 return (
                   <Timeline.Item
                     key={entry.version}
@@ -141,12 +139,7 @@ function ChangelogPage() {
                     <Stack gap="sm" mt="xs">
                       {sections.map(([section, items]) => (
                         <Box key={section}>
-                          <Badge
-                            color={SECTION_COLOR[section] ?? 'gray'}
-                            variant="light"
-                            size="xs"
-                            mb={6}
-                          >
+                          <Badge color={SECTION_COLOR[section] ?? 'gray'} variant="light" size="xs" mb={6}>
                             {section}
                           </Badge>
                           <Stack gap={2}>

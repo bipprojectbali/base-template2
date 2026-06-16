@@ -15,7 +15,7 @@ import {
 } from '@mantine/core'
 import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import { modals } from '@mantine/modals'
-import { createRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { createRoute, Link, redirect, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import {
   TbBug,
@@ -238,8 +238,8 @@ function DashboardPage() {
                   variant="subtle"
                   color="gray"
                   size="lg"
-                  component="a"
-                  href="/dev"
+                  component={Link}
+                  to="/dev"
                   mt={8}
                   style={{ width: '100%' }}
                 >
@@ -255,8 +255,8 @@ function DashboardPage() {
                   label="Dev Console"
                   leftSection={<TbCode size={18} />}
                   rightSection={<TbChevronRight size={14} />}
-                  component="a"
-                  href="/dev"
+                  component={Link}
+                  to="/dev"
                   variant="light"
                   mb={4}
                 />
@@ -271,8 +271,8 @@ function DashboardPage() {
                 size="lg"
                 mb={4}
                 style={{ width: '100%' }}
-                component="a"
-                href="/changelog"
+                component={Link}
+                to="/changelog"
               >
                 <TbSparkles size={18} />
               </ActionIcon>
@@ -282,8 +282,8 @@ function DashboardPage() {
               label="Pembaruan"
               leftSection={<TbSparkles size={18} />}
               rightSection={<TbChevronRight size={14} />}
-              component="a"
-              href="/changelog"
+              component={Link}
+              to="/changelog"
               variant="light"
               mb={4}
             />

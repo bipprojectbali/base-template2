@@ -14,7 +14,7 @@ import {
   useMantineColorScheme,
 } from '@mantine/core'
 import { useDisclosure, useMediaQuery } from '@mantine/hooks'
-import { createRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { createRoute, Link, redirect, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import '@xyflow/react/dist/style.css'
 import { modals } from '@mantine/modals'
@@ -259,8 +259,8 @@ function DevPage() {
                 size="lg"
                 mb={4}
                 style={{ width: '100%' }}
-                component="a"
-                href="/changelog"
+                component={Link}
+                to="/changelog"
               >
                 <TbSparkles size={18} />
               </ActionIcon>
@@ -270,8 +270,8 @@ function DevPage() {
               label="Pembaruan"
               leftSection={<TbSparkles size={18} />}
               rightSection={<TbChevronRight size={14} />}
-              component="a"
-              href="/changelog"
+              component={Link}
+              to="/changelog"
               variant="light"
               mb={4}
             />
