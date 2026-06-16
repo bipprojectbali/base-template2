@@ -39,7 +39,18 @@ export const devAuthRouter = new Elysia().get(
 
     appLog('info', `Dev-auth login: ${user.email} (${user.role})`, getIp(request))
 
-    const cookieHeader = `better-auth.session_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`
+    // Sign token — Better Auth verifies HMAC-SHA256 signature before accepting cookie
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(env.BETTER_AUTH_SECRET),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign'],
+    )
+    const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(token))
+    const b64 = btoa(String.fromCharCode(...new Uint8Array(sig)))
+    const signedToken = `${token}.${b64}`
+    const cookieHeader = `better-auth.session_token=${signedToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`
     const redirect = (query as Record<string, string>).redirect
     if (redirect) {
       set.status = 302

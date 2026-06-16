@@ -1,7 +1,10 @@
+import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '../generated/prisma/client'
 import { scrypt, randomBytes } from 'node:crypto'
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }),
+})
 
 const SUPER_ADMIN_EMAILS = (process.env.SUPER_ADMIN_EMAIL ?? '').split(',').map((e) => e.trim()).filter(Boolean)
 

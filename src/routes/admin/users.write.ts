@@ -24,7 +24,11 @@ export const adminUsersWriteRouter = new Elysia({ tags: ['Admin — Users'] })
         return { error: 'Role tidak valid (USER, QC, atau ADMIN)' }
       }
       const target = await prisma.user.findUnique({ where: { id: params.id }, select: { email: true, role: true } })
-      if (target?.role === 'SUPER_ADMIN') {
+      if (!target) {
+        set.status = 404
+        return { error: 'User not found' }
+      }
+      if (target.role === 'SUPER_ADMIN') {
         set.status = 400
         return { error: 'Tidak bisa mengubah role SUPER_ADMIN' }
       }
@@ -69,6 +73,11 @@ export const adminUsersWriteRouter = new Elysia({ tags: ['Admin — Users'] })
         return { error: 'Tidak bisa memblokir diri sendiri' }
       }
       const { blocked } = body
+      const targetUser = await prisma.user.findUnique({ where: { id: params.id }, select: { id: true } })
+      if (!targetUser) {
+        set.status = 404
+        return { error: 'User not found' }
+      }
       const sessionTokens = blocked
         ? (await prisma.session.findMany({ where: { userId: params.id }, select: { token: true } })).map(
             (s: { token: string }) => s.token,
