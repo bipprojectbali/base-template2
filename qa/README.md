@@ -2,7 +2,7 @@
 
 ---
 versi: 4.0
-sandbox: **OFF** — wajib matikan sandbox sebelum mulai QA (Playwright MCP, curl localhost, dll tidak jalan dengan sandbox ON)
+sandbox: **OFF** — wajib matikan sandbox sebelum mulai QA (agent-browser, curl localhost, dll tidak jalan dengan sandbox ON)
 scope: **GLOBAL** — prompt ini berisi instruksi agnostik lintas-project. Semua data spesifik project dicatat agent secara otonom di `qa/RECON.md`.
 ---
 
@@ -33,7 +33,7 @@ ATURAN TERPENTING:
 QA CHANNELS (semua wajib dieksekusi):
   CH-1  STATIC ANALYSIS   → baca kode, cari bug by pattern, validasi struktur
   CH-2  API TESTING        → curl, RBAC matrix, status code, response validation
-  CH-3  UI/UX TESTING      → Playwright MCP, visual, form, user flow, screenshot (desktop + mobile)
+  CH-3  UI/UX TESTING      → agent-browser CLI (Bash), visual, form, user flow, screenshot (desktop + mobile)
   CH-4  DATABASE VALIDATION→ query DB, cek integritas data setelah mutasi
   CH-5  SECURITY AUDIT     → XSS, injection, auth bypass, tenant isolation
   CH-6  CONSISTENCY CHECK  → cross-check UI vs API vs DB — data harus sama
@@ -41,10 +41,10 @@ QA CHANNELS (semua wajib dieksekusi):
 TOOL MAPPING:
   CH-1 Static Analysis     → file reader / grep (bawaan agent)
   CH-2 API Testing          → curl / HTTP client (Bash)
-  CH-3 UI/UX Testing        → Playwright MCP (WAJIB install)
+  CH-3 UI/UX Testing        → agent-browser CLI via Bash (single binary, zero deps)
   CH-4 Database Validation  → DB query via ORM/CLI (lihat RECON.md scripts)
-  CH-5 Security Audit       → curl + Playwright (kombinasi)
-  CH-6 Consistency Check    → curl + Playwright + DB query (cross-check)
+  CH-5 Security Audit       → curl + agent-browser (kombinasi)
+  CH-6 Consistency Check    → curl + agent-browser + DB query (cross-check)
 ```
 
 ---
@@ -64,7 +64,7 @@ Di awal sesi, **wajib** cek MCP server yang terinstall:
 ATURAN KRITIS:
 
 ✅ BOLEH dipakai untuk QA:
-  - Playwright MCP (browser_*, mcp__playwright__*) → untuk UI/UX testing
+  - agent-browser CLI via Bash → untuk UI/UX testing (single Rust binary, zero deps)
   - Tool bawaan agent (file read, grep, bash, write) → untuk semua channel
 
 ⛔ DILARANG dipakai untuk QA:
@@ -82,17 +82,17 @@ ALASAN:
   Itu bukan QA, itu shortcut.
 ```
 
-### Step 3 — Verifikasi Playwright MCP
+### Step 3 — Verifikasi agent-browser
 
 ```
-Cek apakah Playwright MCP aktif dan bisa dipakai:
-  1. Cari tool dengan prefix `mcp__playwright__` atau `browser_`
-  2. Coba: browser_navigate ke target URL (dari RECON.md)
-  3. Jika berhasil → catat "Playwright MCP: ✓" di 00_ENV_PRECHECK.md
+Cek apakah agent-browser tersedia dan bisa dipakai:
+  1. Jalankan: agent-browser --version
+  2. Jika ada output versi → catat "agent-browser: ✓ vX.Y.Z" di 00_ENV_PRECHECK.md
+  3. Coba: agent-browser open {URL} && agent-browser snapshot
   4. Jika GAGAL atau TIDAK ADA:
-     → STOP. Minta user install: "/mcp add playwright"
-     → Jangan lanjut tanpa Playwright — Channel 3 (UI/UX) tidak bisa jalan
-     → Jangan substitusi dengan MCP project sebagai pengganti Playwright
+     → Jalankan: npm install -g agent-browser && agent-browser install
+     → Jangan lanjut tanpa agent-browser — Channel 3 (UI/UX) tidak bisa jalan
+     → Jangan substitusi dengan MCP project sebagai pengganti agent-browser
 ```
 
 ### Step 4 — Catat di RECON.md
@@ -104,7 +104,7 @@ Tambahkan/update section di RECON.md:
 
 | MCP Server        | Prefix tool           | Klasifikasi     | Dipakai untuk QA? |
 | ----------------- | --------------------- | --------------- | ------------------ |
-| playwright        | mcp__playwright__*    | browser testing | ✅ Ya — CH-3       |
+| agent-browser     | CLI via Bash          | browser testing | ✅ Ya — CH-3       |
 | nama-project      | mcp__nama-project__*  | operasional     | ⛔ Tidak           |
 | ...               | ...                   | ...             | ...                |
 ```
@@ -191,11 +191,11 @@ done
 # Simpan detail di NETWORK_LOG.md
 ```
 
-### Channel 3 — UI/UX TESTING (Playwright MCP)
+### Channel 3 — UI/UX TESTING (agent-browser)
 
-**Tool**: Playwright MCP (`mcp__playwright__*` atau `browser_*`)
+**Tool**: `agent-browser` CLI via Bash (single Rust binary, 7 MB, zero Node.js deps)
 **Kapan**: Fase 1 (discovery) + Fase 3 (eksekusi TC UI)
-**WAJIB**: Playwright MCP harus terinstall. Jika tidak ada → STOP, minta user install.
+**WAJIB**: `agent-browser` harus terinstall. Cek: `agent-browser --version`. Jika tidak ada → `npm install -g agent-browser && agent-browser install`.
 
 **Apa yang ditest**:
 
@@ -236,61 +236,69 @@ done
   ✦ Touch target (button/link) tidak saling tumpang tindih di mobile
 ```
 
-**Viewport coverage — pola Playwright:**
+**Viewport coverage — pola agent-browser:**
 
 ```
 Untuk SETIAP halaman yang di-discovery / di-test TC, WAJIB ambil minimal
 2 screenshot: satu desktop, satu mobile.
 
 Desktop:
-  → browser_resize(width=1280, height=800)
-  → browser_navigate → URL
-  → browser_take_screenshot → screenshots/discovery/desktop/{role}-{slug}.png
+  → agent-browser viewport 1280 800
+  → agent-browser open {URL}
+  → agent-browser screenshot screenshots/discovery/desktop/{role}-{slug}.png
 
 Mobile:
-  → browser_resize(width=375, height=812)      // iPhone X-like
-  → browser_navigate → URL (atau reload)
-  → browser_take_screenshot → screenshots/discovery/mobile/{role}-{slug}.png
+  → agent-browser viewport 375 812          # iPhone X-like
+  → agent-browser open {URL}                # atau: open lagi dengan URL yang sama
+  → agent-browser screenshot screenshots/discovery/mobile/{role}-{slug}.png
 
 Catatan:
-  - Halaman yang jelas "mobile-only" (portal warga dengan bottom nav) WAJIB
-    diverifikasi di mobile viewport — di desktop boleh cek "tidak broken"
-  - Halaman dashboard/admin yang "desktop-first" WAJIB tetap dicek di mobile
-    untuk memastikan tidak patah total (minimal readable atau ada fallback)
-  - Bug visual yang hanya muncul di 1 viewport = valid bug, tulis viewport-nya
-    di laporan: "BUG-XXX [mobile-only]" atau "[desktop-only]"
+  - Halaman yang jelas "mobile-only" WAJIB diverifikasi di mobile viewport
+  - Halaman dashboard/admin WAJIB tetap dicek di mobile — minimal readable
+  - Bug visual yang hanya muncul di 1 viewport = valid bug, tulis viewport-nya:
+    "BUG-XXX [mobile-only]" atau "[desktop-only]"
 ```
 
-**Pola Playwright:**
+**Pola agent-browser:**
 
 ```
 Login (semua role):
-  → browser_navigate ke: {URL}/api/dev-auth/login-as/{email}?redirect={tujuan}
+  → agent-browser open {URL}/api/dev-auth/login-as/{email}?redirect={tujuan}
   → Cookie auto-set, halaman redirect ke tujuan
-  → Ganti role: navigate ke dev-auth login-as dengan email role baru
+  → Ganti role: open lagi dengan dev-auth login-as email role baru
 
 Discovery (Fase 1):
-  1. browser_navigate → URL halaman
-  2. browser_snapshot → baca semua elemen interaktif
-  3. browser_console_messages → catat error/warning
-  4. browser_take_screenshot → simpan ke screenshots/discovery/{role}-{slug}.png
-  5. browser_click → buka setiap tab, accordion, modal (tutup tanpa submit)
+  1. agent-browser open {URL}
+  2. agent-browser snapshot              # accessibility tree + @ref tiap elemen
+  3. agent-browser console               # catat error/warning
+  4. agent-browser screenshot screenshots/discovery/{role}-{slug}.png
+  5. agent-browser click @refN           # buka setiap tab, accordion, modal (tutup tanpa submit)
   6. Catat temuan ke SITEMAP.md SEBELUM pindah halaman
 
 Eksekusi TC:
   1. Tulis NIAT di PROGRESS.md
-  2. browser_navigate → halaman target
-  3. Aksi: browser_fill_form, browser_click, browser_select_option, browser_press_key
-  4. browser_snapshot → verifikasi hasil
-  5. browser_console_messages → cek error baru
-  6. browser_take_screenshot → simpan evidence
-  7. Tulis hasil ke PROGRESS + TIMELINE + REPORT
+  2. agent-browser open {URL}
+  3. agent-browser snapshot -i           # -i = interactive elements only
+  4. Aksi:
+       agent-browser fill @refN "nilai"
+       agent-browser click @refN
+       agent-browser press Enter
+       agent-browser select @refN "opsi"
+  5. agent-browser snapshot              # verifikasi hasil
+  6. agent-browser console               # cek error baru
+  7. agent-browser screenshot screenshots/TC-{id}-step{n}.png
+  8. Tulis hasil ke PROGRESS + TIMELINE + REPORT
 
 Screenshot — aturan ketat:
   - Ambil SAAT evidence terlihat di layar, bukan setelah pindah halaman
   - Nama file harus mengandung ID: BUG-003.png, TC-017.png
   - Modal/toast → screenshot SEBELUM tutup/hilang
   - Multi-step → suffix: TC-017-step1.png, TC-017-step2.png
+
+Ref (@e2, @e3, dst):
+  - Ref di-generate fresh setiap `snapshot` — selalu snapshot ulang setelah navigasi
+  - Jika ref tidak ditemukan → snapshot ulang, jangan tebak ref lama
+  - `snapshot -i` hanya tampilkan elemen interaktif (lebih ringkas untuk LLM)
 ```
 
 ### Channel 4 — DATABASE VALIDATION (query DB)
@@ -334,7 +342,7 @@ psql $DATABASE_URL -c "SELECT count(*) FROM resource WHERE tenant_id = '...'"
 
 ### Channel 5 — SECURITY AUDIT
 
-**Tool**: curl + Playwright (kombinasi)
+**Tool**: curl + agent-browser (kombinasi)
 **Kapan**: Fase 3, sebagai bagian dari Cross-cutting test
 **Apa yang ditest**:
 
@@ -366,7 +374,7 @@ psql $DATABASE_URL -c "SELECT count(*) FROM resource WHERE tenant_id = '...'"
 
 ### Channel 6 — CONSISTENCY CHECK (cross-check)
 
-**Tool**: curl + Playwright + DB query (kombinasi)
+**Tool**: curl + agent-browser + DB query (kombinasi)
 **Kapan**: Fase 3, setelah beberapa TC selesai di channel lain
 **Apa yang ditest**:
 
@@ -427,8 +435,8 @@ Channel dengan 0 TC = BLOCKER — sesi tidak boleh di-declare selesai.
 
 | Situasi                              | Aksi                                                          |
 | ------------------------------------ | ------------------------------------------------------------- |
-| Playwright MCP belum install         | STOP. Minta user install via `/mcp`. CH-3 tidak bisa jalan.   |
-| Playwright MCP disconnect mid-sesi   | Catat di TIMELINE. Coba reconnect. Minta user jika gagal.     |
+| agent-browser tidak terinstall       | Jalankan: `npm install -g agent-browser && agent-browser install`. CH-3 tidak bisa jalan. |
+| agent-browser crash mid-sesi         | Catat di TIMELINE. Restart: `agent-browser open {URL}`. Lanjut dari TC terakhir.         |
 | Curl diblokir sandbox                | Pakai `dangerouslyDisableSandbox: true` di Bash.              |
 | DB query tidak bisa (no access)      | Catat di RECON.md. CH-4 partial — test via API response saja. |
 | Screenshot gagal tersimpan           | Catat di TIMELINE. Coba ulang. Jangan skip evidence.          |
@@ -617,7 +625,7 @@ RECON-08 — Setup akun test per role
     b. Cek seed file — apakah ada user test yang di-create
     c. Baca .env — ada ADMIN_EMAILS atau similar?
     d. Buat akun test jika belum ada (via dev-auth, seed, atau DB langsung)
-    e. Verifikasi login berhasil (curl / Playwright) — simpan cookie
+    e. Verifikasi login berhasil (curl / agent-browser) — simpan cookie
     f. Catat: role, email, login method, tenant assignment, cookie path
   → JANGAN tanya user email/password — cari sendiri atau buat sendiri
   → Tujuan: setiap role punya akun test yang bisa dipakai
@@ -912,7 +920,7 @@ STEP 0.6 — Mulai Fase 0
 - **Target**: [URL dev/stg]
 - **Build**: [versi app, commit SHA, branch]
 - **Tester**: AI QA Agent ([nama model])
-- **Tooling**: Playwright MCP, curl, Bash, dll
+- **Tooling**: agent-browser (Bash), curl, Bash, dll
 - **Fokus**: [area prioritas untuk sesi ini, ambil dari BUG REGISTRY + sesi lalu]
 - **Out-of-scope sesi ini**: [kalau ada yang di-skip sadar]
 - **Status**: IN_PROGRESS | PAUSED | COMPLETED | ABORTED
@@ -980,8 +988,8 @@ STEP 0.C — Test data ada?
   → Pastikan setiap role punya tenant mapping yang benar (jika multi-tenant)
 
 STEP 0.D — Console clean di landing?
-  → Buka landing page dengan Playwright/curl
-  → Cek browser console (kalau pakai Playwright)
+  → Buka landing page: agent-browser open {URL} && agent-browser console
+  → Cek browser console: agent-browser console (catat semua error/warning)
   → Catat semua error di 00_ENV_PRECHECK.md
   → Jika ada error noise yang akan mengganggu tes → escalate ke user sebelum lanjut
 
@@ -1728,7 +1736,7 @@ Kalau sesi di-interrupt (user pause, context terlalu panjang, crash):
 | SQL            | artifacts/BUG-XXX-query.sql       | query + hasil (bisa CSV terpisah)       |
 | Log file       | artifacts/BUG-XXX-log.txt         | tail yang relevan, timestamp            |
 | Code reference | inline di REPORT                  | file.ts:line — deskripsi                |
-| Video          | artifacts/BUG-XXX.mp4             | kalau Playwright record                 |
+| Video          | artifacts/BUG-XXX.mp4             | opsional, rekam manual jika perlu       |
 
 Screenshot wajib ambil **sebelum** menutup modal / pindah halaman — screenshot di halaman lain = tidak valid.
 

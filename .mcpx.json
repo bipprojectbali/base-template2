@@ -1,9 +1,5 @@
 {
   "mcpServers": {
-    "playwright": {
-      "command": "bunx",
-      "args": ["@playwright/mcp@latest"]
-    },
     "debug-dev": {
       "command": "bun",
       "args": ["run", "scripts/mcp/server.ts"],
