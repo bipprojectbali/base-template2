@@ -35,10 +35,12 @@ src/frontend/routeTree.gen.ts
 
 /generated/prisma
 
-# Playwright MCP artifacts & ad-hoc screenshots
-.playwright-mcp/
+# agent-browser & ad-hoc screenshots yang tercecer di root
 .claude/scheduled_tasks.lock
 /*.png
+/*.jpg
+/*.jpeg
+/*.webp
 
 # Scratch / ad-hoc files — never commit
 x.sh

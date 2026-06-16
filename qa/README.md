@@ -242,15 +242,25 @@ done
 Untuk SETIAP halaman yang di-discovery / di-test TC, WAJIB ambil minimal
 2 screenshot: satu desktop, satu mobile.
 
+ATURAN PATH — wajib ikuti, jangan abaikan:
+  - Semua screenshot HARUS masuk ke qa/YYYY-MM-DD/screenshots/ — BUKAN root project
+  - Gunakan wrapper: qa/screenshot.sh <nama> <subdir> [sesi]
+  - Atau tulis path lengkap: agent-browser screenshot qa/YYYY-MM-DD/screenshots/...
+  - Jangan pernah: agent-browser screenshot admin-home.png (tanpa path = tercecer di root)
+
 Desktop:
   → agent-browser viewport 1280 800
   → agent-browser open {URL}
-  → agent-browser screenshot screenshots/discovery/desktop/{role}-{slug}.png
+  → qa/screenshot.sh {role}-{slug} discovery/desktop
 
 Mobile:
   → agent-browser viewport 375 812          # iPhone X-like
   → agent-browser open {URL}                # atau: open lagi dengan URL yang sama
-  → agent-browser screenshot screenshots/discovery/mobile/{role}-{slug}.png
+  → qa/screenshot.sh {role}-{slug} discovery/mobile
+
+Atau dengan path eksplisit:
+  → agent-browser screenshot qa/YYYY-MM-DD/screenshots/discovery/desktop/{role}-{slug}.png
+  → agent-browser screenshot qa/YYYY-MM-DD/screenshots/discovery/mobile/{role}-{slug}.png
 
 Catatan:
   - Halaman yang jelas "mobile-only" WAJIB diverifikasi di mobile viewport
@@ -271,7 +281,8 @@ Discovery (Fase 1):
   1. agent-browser open {URL}
   2. agent-browser snapshot              # accessibility tree + @ref tiap elemen
   3. agent-browser console               # catat error/warning
-  4. agent-browser screenshot screenshots/discovery/{role}-{slug}.png
+  4. qa/screenshot.sh {role}-{slug} discovery/desktop     # desktop viewport aktif
+     qa/screenshot.sh {role}-{slug} discovery/mobile      # setelah ganti viewport mobile
   5. agent-browser click @refN           # buka setiap tab, accordion, modal (tutup tanpa submit)
   6. Catat temuan ke SITEMAP.md SEBELUM pindah halaman
 
@@ -286,14 +297,16 @@ Eksekusi TC:
        agent-browser select @refN "opsi"
   5. agent-browser snapshot              # verifikasi hasil
   6. agent-browser console               # cek error baru
-  7. agent-browser screenshot screenshots/TC-{id}-step{n}.png
+  7. qa/screenshot.sh TC-{id}-step{n} evidence            # untuk bug/evidence
+     qa/screenshot.sh TC-{id} passed                      # untuk yang lulus
   8. Tulis hasil ke PROGRESS + TIMELINE + REPORT
 
 Screenshot — aturan ketat:
+  - WAJIB gunakan qa/screenshot.sh atau path lengkap — jangan nama file saja
   - Ambil SAAT evidence terlihat di layar, bukan setelah pindah halaman
-  - Nama file harus mengandung ID: BUG-003.png, TC-017.png
+  - Nama file harus mengandung ID: BUG-003, TC-017
   - Modal/toast → screenshot SEBELUM tutup/hilang
-  - Multi-step → suffix: TC-017-step1.png, TC-017-step2.png
+  - Multi-step → suffix: TC-017-step1, TC-017-step2
 
 Ref (@e2, @e3, dst):
   - Ref di-generate fresh setiap `snapshot` — selalu snapshot ulang setelah navigasi
