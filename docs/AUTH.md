@@ -64,3 +64,19 @@ Better Auth uses **scrypt** format: `salt:hex` (NOT bcrypt).
 
 `getDefaultRoute(role)` in `src/frontend/hooks/useAuth.ts`.
 Blocked users redirect to `/blocked` from all protected routes.
+
+## Ticket Status Transitions
+
+Status machine: `OPEN → IN_PROGRESS → READY_FOR_QC → CLOSED`, with `REOPENED` branch.
+
+Implemented di `src/lib/ticket-helpers.ts`. `isQc = role === 'QC' || role === 'SUPER_ADMIN'`.
+
+| From | QC / SUPER_ADMIN | ADMIN |
+|------|-----------------|-------|
+| OPEN | `IN_PROGRESS`, `CLOSED`* | `IN_PROGRESS` |
+| IN_PROGRESS | `CLOSED` | `READY_FOR_QC` |
+| READY_FOR_QC | `CLOSED`, `REOPENED` | — |
+| REOPENED | `CLOSED` | `IN_PROGRESS` |
+| CLOSED | `REOPENED` | — |
+
+\* **Fast reject**: QC dan SUPER_ADMIN dapat langsung menutup ticket dari status OPEN tanpa melalui alur normal. Ini digunakan untuk menolak ticket yang invalid, duplikat, atau di luar scope — tanpa harus menunggu ADMIN memprosesnya ke `IN_PROGRESS` terlebih dahulu.

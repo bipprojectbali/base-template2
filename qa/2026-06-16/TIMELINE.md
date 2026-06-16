@@ -42,3 +42,26 @@ Append-only, kronologis.
 2026-06-16 13:30 CH-6 — API count vs DB count — consistent ✓
 2026-06-16 13:30 QA artifacts written (RECON, SESSION, ENV_PRECHECK, NETWORK_LOG, REPORT, TIMELINE)
 2026-06-16 13:30 status: INCOMPLETE — CH-3 UI/UX belum dieksekusi (agent-browser tersedia)
+2026-06-16 14:00 CH-3 dimulai — agent-browser 0.27.0
+2026-06-16 14:00 CH-3 — landing page (/) discovery + screenshot desktop + mobile ✓
+2026-06-16 14:05 CH-3 — login page discovery: form fields, error handling, dark mode ✓
+2026-06-16 14:05 TC UI-001: login valid → redirect /dev ✓
+2026-06-16 14:05 TC UI-002: login password salah → alert "Invalid email or password" ✓
+2026-06-16 14:07 TC UI-003: submit form kosong → HTML5 required validation ✓
+2026-06-16 14:08 TC UI-004: dark mode toggle → scheme berubah ✓
+2026-06-16 14:10 CH-3 — /dev (SA) discovery: 6 tabs diverifikasi, screenshot desktop + mobile ✓
+2026-06-16 14:10 TC UI-009: sidebar collapse di /dev ✓
+2026-06-16 14:15 CH-3 — /dashboard (ADMIN) discovery + screenshot, tab Tickets ✓
+2026-06-16 14:15 TC UI-015: /dashboard tab Tickets ✓
+2026-06-16 14:17 CH-3 — /dashboard (QC) discovery + screenshot ✓
+2026-06-16 14:18 CH-3 — /profile (USER) discovery + screenshot ✓
+2026-06-16 14:20 CH-3 — /changelog discovery + screenshot ✓
+2026-06-16 14:22 TC UI-005: USER akses /dev → redirect /profile ✓
+2026-06-16 14:22 TC UI-006: ADMIN akses /dev → redirect /profile ✓
+2026-06-16 14:23 TC UI-007: guest akses /dashboard → redirect /login ✓
+2026-06-16 14:25 TC UI-008: XSS payload di ticket → React escape (ESCAPED_OK) ✓
+2026-06-16 14:26 TC UI-010: WhatsNew modal dismiss ✓
+2026-06-16 14:27 Mobile testing: set device "iPhone 14", 7 halaman di-screenshot ✓
+2026-06-16 14:30 CH-3 artifacts: 01_SITEMAP.md, 03_PROGRESS.md, 04_REPORT.md updated
+2026-06-16 14:30 COMPLIANCE GATE: PASS — semua channel selesai
+2026-06-16 14:30 SESSION STATUS: COMPLETED — BUG-001 open (needs product decision)

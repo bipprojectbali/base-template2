@@ -55,6 +55,7 @@ async function upsertUser(
 async function main() {
   await upsertUser('superadmin@example.com', 'superadmin123', 'Super Admin', 'SUPER_ADMIN')
   await upsertUser('admin@example.com', 'admin123', 'Admin', 'ADMIN')
+  await upsertUser('qc@example.com', 'qc123', 'QC Officer', 'QC')
   await upsertUser('user@example.com', 'user123', 'User', 'USER')
 
   for (const email of SUPER_ADMIN_EMAILS) {

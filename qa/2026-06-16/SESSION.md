@@ -19,3 +19,6 @@
 - 2026-06-16 13:29 — BUG-002 dan BUG-003 dikonfirmasi INVALID (salah test setup)
 - 2026-06-16 13:30 — BUG-004 fixed, typecheck hijau, 152 test pass
 - 2026-06-16 13:30 — QA artifacts ditulis
+- 2026-06-16 14:30 — CH-3 (UI/UX) selesai: 15 TC, 15 PASS, 0 FAIL, agent-browser 0.27.0
+- 2026-06-16 14:30 — COMPLIANCE GATE: ✅ PASS — semua channel selesai
+- 2026-06-16 14:30 — Open: BUG-001 butuh product decision, FINDING-001 seed QC user
