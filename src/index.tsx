@@ -8,9 +8,10 @@ const isProduction = env.NODE_ENV === 'production'
 
 // ─── Route Classification ──────────────────────────────
 const API_PREFIXES = ['/api/', '/webhook/', '/ws/', '/health']
+const API_EXACT = new Set(['/health', '/llms.txt'])
 
 function isApiRoute(pathname: string): boolean {
-  return API_PREFIXES.some((p) => pathname.startsWith(p)) || pathname === '/health'
+  return API_PREFIXES.some((p) => pathname.startsWith(p)) || API_EXACT.has(pathname)
 }
 
 // ─── Vite Dev Server (dev only) ────────────────────────
@@ -78,6 +79,13 @@ async function serveFrontend(request: Request): Promise<Response> {
         },
         removeHeader(name: string) {
           delete this.headers[name.toLowerCase()]
+        },
+        appendHeader(name: string, value: string | string[]) {
+          const key = name.toLowerCase()
+          const add = Array.isArray(value) ? value.join(', ') : value
+          const existing = this.headers[key]
+          this.headers[key] = existing ? `${existing}, ${add}` : add
+          return this
         },
         writeHead(
           code: number,
