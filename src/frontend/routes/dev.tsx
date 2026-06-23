@@ -25,6 +25,7 @@ import {
   TbCode,
   TbDatabase,
   TbDotsVertical,
+  TbFileText,
   TbLayoutDashboard,
   TbLayoutSidebarLeftCollapse,
   TbLayoutSidebarLeftExpand,
@@ -272,6 +273,36 @@ function DevPage() {
               rightSection={<TbChevronRight size={14} />}
               component={Link}
               to="/changelog"
+              variant="light"
+              mb={4}
+            />
+          )}
+
+          {collapsed ? (
+            <Tooltip label="llms.txt" position="right">
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                size="lg"
+                mb={4}
+                style={{ width: '100%' }}
+                component="a"
+                href="/llms.txt"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <TbFileText size={18} />
+              </ActionIcon>
+            </Tooltip>
+          ) : (
+            <NavLink
+              label="llms.txt"
+              leftSection={<TbFileText size={18} />}
+              rightSection={<TbChevronRight size={14} />}
+              component="a"
+              href="/llms.txt"
+              target="_blank"
+              rel="noreferrer"
               variant="light"
               mb={4}
             />
