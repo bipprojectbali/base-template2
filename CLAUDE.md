@@ -23,7 +23,14 @@ bun run start           # production server
 bun run typecheck       # tsc --noEmit
 bun run lint            # biome check
 bun run lint:fix        # biome check --write
+bun run docs:llms       # regenerate llms.txt from project sources
+bun run docs:llms:check # CI: fail if llms.txt is stale
 ```
+
+`llms.txt` is an auto-generated artifact (project metadata, routes, schema, env, recent changes).
+Never edit it by hand — it is rebuilt from package.json, `src/lib/routes-catalog.ts`,
+`prisma/schema.prisma`, `src/lib/env-map-catalog.ts`, `CHANGELOG.md`, and `docs/`.
+Also served live at `GET /llms.txt`. Logic in `src/lib/llms-generator.ts`.
 
 ## Testing
 
