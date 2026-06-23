@@ -5,6 +5,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- `llms.txt` generator (`bun run docs:llms`) — auto-builds an LLM-friendly project summary from routes, schema, env, and changelog
+- `GET /llms.txt` endpoint — serves the same summary live, rebuilt from sources on each request
+
 ### Changed
 - Remove unused dependencies: Three.js, React Three Fiber, D3, TanStack Router Vite plugin
 - Sync agent configs and update login/blocked routes

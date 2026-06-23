@@ -45,6 +45,7 @@ Frontend component: `src/frontend/components/TicketsPanel.tsx` — shared betwee
 - `GET /health` — `{ status: 'ok' }`
 - `GET /api/version` — `{ name, version }` from package.json
 - `GET /api/changelog` — latest changelog entry as JSON (`{ version, date, sections }`). Pass `?all=true` for all versions.
+- `GET /llms.txt` — auto-generated plain-text project summary for LLMs (routes, schema, env, recent changes). Rebuilt live from sources on each request. Also generatable as a static file via `bun run docs:llms`.
 - `GET /api/hello` / `PUT /api/hello` / `GET /api/hello/:name`
 
 ## WebSocket

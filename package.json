@@ -18,6 +18,8 @@
     "db:studio": "bunx --bun prisma studio",
     "db:generate": "bunx --bun prisma generate",
     "db:push": "bunx --bun prisma db push",
+    "docs:llms": "bun scripts/gen-llms.ts",
+    "docs:llms:check": "bun scripts/gen-llms.ts --check",
     "build:migrate": "bun build scripts/migrate.ts --compile --target=bun-linux-x64 --outfile migrate",
     "build:server": "bun build src/server.prod.ts --compile --target=bun-linux-x64 --outfile server"
   },
