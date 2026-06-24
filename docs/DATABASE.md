@@ -9,6 +9,21 @@ import { prisma } from './lib/db'
 
 Commands: `bun run db:migrate` | `bun run db:seed` | `bun run db:generate`
 
+### Test Database Isolation
+
+`bun test` sets `NODE_ENV=test` automatically. When set, `src/lib/db.ts`
+(`resolveDatabaseUrl()`) connects to **`TEST_DATABASE_URL`** instead of
+`DATABASE_URL`, so the suite's destructive `cleanupTestData()` never wipes the
+dev/prod database. If `TEST_DATABASE_URL` is unset, it falls back to
+`DATABASE_URL` (legacy behavior — unsafe, avoid).
+
+Setup once:
+```bash
+createdb base-template-test
+DATABASE_URL="postgresql://.../base-template-test" bun run db:migrate
+# then set TEST_DATABASE_URL in .env to the same URL
+```
+
 ### Schema (`prisma/schema.prisma`)
 
 | Model | Key Fields |

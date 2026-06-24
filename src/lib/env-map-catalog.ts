@@ -17,6 +17,14 @@ export const ENV_DEFS: EnvDef[] = [
     description: 'PostgreSQL connection string',
   },
   {
+    name: 'TEST_DATABASE_URL',
+    envKey: 'TEST_DATABASE_URL',
+    required: false,
+    default: null,
+    category: 'database',
+    description: 'PostgreSQL connection string used by `bun test` (NODE_ENV=test); falls back to DATABASE_URL if unset',
+  },
+  {
     name: 'REDIS_URL',
     envKey: 'REDIS_URL',
     required: true,
