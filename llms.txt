@@ -99,6 +99,7 @@ CHANGELOG.md, and the docs/ folder. Edit those sources instead.
 
 ## Environment Variables
 - `DATABASE_URL` (required) — PostgreSQL connection string
+- `TEST_DATABASE_URL` (optional, default: none) — PostgreSQL connection string used by `bun test` (NODE_ENV=test); falls back to DATABASE_URL if unset
 - `REDIS_URL` (required) — Redis connection string
 - `GOOGLE_CLIENT_ID` (required) — Google OAuth client ID
 - `GOOGLE_CLIENT_SECRET` (required) — Google OAuth client secret

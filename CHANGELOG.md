@@ -8,10 +8,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - `llms.txt` generator (`bun run docs:llms`) — auto-builds an LLM-friendly project summary from routes, schema, env, and changelog
 - `GET /llms.txt` endpoint — serves the same summary live, rebuilt from sources on each request
+- llms.txt link in the `/dev` sidebar — opens the live endpoint in a new tab
 
 ### Changed
 - Remove unused dependencies: Three.js, React Three Fiber, D3, TanStack Router Vite plugin
 - Sync agent configs and update login/blocked routes
+
+### Fixed
+- Tests now connect to `TEST_DATABASE_URL` under `NODE_ENV=test`, isolating the destructive test cleanup from the dev/prod database
+- `/llms.txt` reaches the live Elysia endpoint instead of being served as a static asset / SPA fallback
+- `appendHeader` added to the Vite dev middleware response shim (fixes `res.appendHeader is not a function`)
 
 ---
 
