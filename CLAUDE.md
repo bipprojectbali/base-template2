@@ -137,7 +137,6 @@ dokumentasi yang relevan di commit yang sama:
 | Auth / role / session | `docs/AUTH.md` |
 | Schema Prisma / Redis namespace | `docs/DATABASE.md` |
 | Frontend route / hook / komponen utama | `docs/FRONTEND.md` |
-| MCP tool baru / berubah | `docs/MCP.md` |
 | Aturan/kontrak kerja AI | `docs/AI_CONTRACT.md` |
 | Checklist saat tambah fitur | `docs/FEATURE-CHECKLIST.md` |
 | Aturan ukuran/struktur file | `docs/FILE-HEALTH.md` |
@@ -160,7 +159,5 @@ See @docs/AUTH.md
 See @docs/API.md
 See @docs/FRONTEND.md
 See @docs/DATABASE.md
-See @docs/MCP.md
 See @docs/FILE-HEALTH.md
 See @docs/FEATURE-CHECKLIST.md
-See @docs/SPLIT-CLAUDE.md

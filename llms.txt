@@ -13,7 +13,6 @@ CHANGELOG.md, and the docs/ folder. Edit those sources instead.
 - [AUTH](docs/AUTH.md): Auth flow, roles, sessions, ticket status machine
 - [DATABASE](docs/DATABASE.md): Prisma schema, Redis namespaces, audit logs
 - [FRONTEND](docs/FRONTEND.md): React routes, hooks, components, UI conventions
-- [MCP](docs/MCP.md): MCP server tools and HTTP fallback
 - [SCALING](docs/SCALING.md): Performance and scaling playbook
 - [FILE-HEALTH](docs/FILE-HEALTH.md): File size limits and split rules
 - [FEATURE-CHECKLIST](docs/FEATURE-CHECKLIST.md): Required steps when adding a feature
