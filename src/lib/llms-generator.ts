@@ -36,10 +36,7 @@ const DOC_SUMMARIES: Record<string, string> = {
   'docs/AUTH.md': 'Auth flow, roles, sessions, ticket status machine',
   'docs/DATABASE.md': 'Prisma schema, Redis namespaces, audit logs',
   'docs/FRONTEND.md': 'React routes, hooks, components, UI conventions',
-  'docs/SCALING.md': 'Performance and scaling playbook',
   'docs/FILE-HEALTH.md': 'File size limits and split rules',
-  'docs/FEATURE-CHECKLIST.md': 'Required steps when adding a feature',
-  'docs/AI_CONTRACT.md': 'Working contract for AI agents in this repo',
 }
 
 function readFirstParagraph(absPath: string): string {

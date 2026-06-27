@@ -137,10 +137,7 @@ dokumentasi yang relevan di commit yang sama:
 | Auth / role / session | `docs/AUTH.md` |
 | Schema Prisma / Redis namespace | `docs/DATABASE.md` |
 | Frontend route / hook / komponen utama | `docs/FRONTEND.md` |
-| Aturan/kontrak kerja AI | `docs/AI_CONTRACT.md` |
-| Checklist saat tambah fitur | `docs/FEATURE-CHECKLIST.md` |
 | Aturan ukuran/struktur file | `docs/FILE-HEALTH.md` |
-| Strategi scaling / performance | `docs/SCALING.md` |
 | Struktur project / command utama / overview | `CLAUDE.md` (file ini) |
 
 Aturan:
@@ -153,11 +150,8 @@ Aturan:
 
 ## Detail Docs
 
-See @docs/AI_CONTRACT.md
-See @docs/SCALING.md
 See @docs/AUTH.md
 See @docs/API.md
 See @docs/FRONTEND.md
 See @docs/DATABASE.md
 See @docs/FILE-HEALTH.md
-See @docs/FEATURE-CHECKLIST.md
