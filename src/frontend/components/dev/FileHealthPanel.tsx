@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react'
 import { TbClipboardCheck, TbRefresh, TbRuler2 } from 'react-icons/tb'
 import { apiFetch } from '@/frontend/lib/apiFetch'
 import { FiltersCard } from './FileHealthPanel.filters'
+import { FileHealthInfo } from './FileHealthPanel.info'
 import { FileHealthTable } from './FileHealthPanel.table'
 import { type FileHealth, type FileHealthResponse, fmtNumber, STATS } from './FileHealthPanel.types'
 
@@ -111,6 +112,8 @@ export function FileHealthPanel() {
             </ActionIcon>
           </Tooltip>
         </Group>
+
+        <FileHealthInfo />
 
         <SimpleGrid cols={{ base: 2, sm: 4 }}>
           {STATS.map((s) => (
