@@ -87,10 +87,28 @@ export async function createTestSession(userId: string, expiresAt?: Date): Promi
   return signToken(token)
 }
 
-/** Clean up all test data */
+/**
+ * Clean up all test data.
+ *
+ * Last line of defense: this wipes EVERY row in these tables, so we refuse to
+ * run unless we are certain we are connected to the isolated test database
+ * (NODE_ENV=test + a TEST_DATABASE_URL distinct from DATABASE_URL). Without
+ * this guard, a misconfigured env would silently delete dev/prod data.
+ */
 export async function cleanupTestData() {
+  assertTestDatabase()
   await prisma.auditLog.deleteMany()
   await prisma.session.deleteMany()
   await prisma.account.deleteMany()
   await prisma.user.deleteMany()
+}
+
+/** Throw unless the active connection is the isolated test database. */
+export function assertTestDatabase(testEnv: NodeJS.ProcessEnv = process.env) {
+  if (testEnv.NODE_ENV !== 'test') {
+    throw new Error(`cleanupTestData() called with NODE_ENV=${testEnv.NODE_ENV ?? 'undefined'} — expected 'test'. Aborting destructive cleanup.`)
+  }
+  if (!testEnv.TEST_DATABASE_URL || testEnv.TEST_DATABASE_URL === testEnv.DATABASE_URL) {
+    throw new Error('cleanupTestData() refused: TEST_DATABASE_URL is unset or equal to DATABASE_URL. Point tests at a separate database (.env.test).')
+  }
 }

@@ -14,14 +14,28 @@ Commands: `bun run db:migrate` | `bun run db:seed` | `bun run db:generate`
 `bun test` sets `NODE_ENV=test` automatically. When set, `src/lib/db.ts`
 (`resolveDatabaseUrl()`) connects to **`TEST_DATABASE_URL`** instead of
 `DATABASE_URL`, so the suite's destructive `cleanupTestData()` never wipes the
-dev/prod database. If `TEST_DATABASE_URL` is unset, it falls back to
-`DATABASE_URL` (legacy behavior — unsafe, avoid).
+dev/prod database.
+
+**Fail-closed, not fail-open.** Under `NODE_ENV=test`, `resolveDatabaseUrl()`
+**throws** if `TEST_DATABASE_URL` is unset, or if it equals `DATABASE_URL` —
+it never silently falls back to the dev DB. `cleanupTestData()` runs the same
+check (`assertTestDatabase()`) as a final guard before deleting rows. This is
+defense-in-depth: a misconfigured env aborts the run instead of wiping dev data.
+
+**Where `TEST_DATABASE_URL` lives — `.env.test`, not `.env`.** `bun test` loads
+`.env.test` in addition to `.env`. Due to a Bun precedence quirk
+([#6840](https://github.com/oven-sh/bun/issues/6840)), a variable present in
+**both** files takes its value from `.env` — so you cannot override `DATABASE_URL`
+from `.env.test`. The test DB therefore uses its **own** variable,
+`TEST_DATABASE_URL`, defined **only** in `.env.test` (gitignored). Keeping it out
+of `.env` guarantees the dev DB and the wiped test DB never share a config
+surface. Template: `.env.test.example`.
 
 Setup once:
 ```bash
 createdb base-template-test
+cp .env.test.example .env.test          # then edit the URL
 DATABASE_URL="postgresql://.../base-template-test" bun run db:migrate
-# then set TEST_DATABASE_URL in .env to the same URL
 ```
 
 ### Schema (`prisma/schema.prisma`)

@@ -16,6 +16,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 - Tests now connect to `TEST_DATABASE_URL` under `NODE_ENV=test`, isolating the destructive test cleanup from the dev/prod database
+- Test DB isolation is now fail-closed: `resolveDatabaseUrl()` throws (instead of silently using the dev DB) when `TEST_DATABASE_URL` is unset or equals `DATABASE_URL`, and `cleanupTestData()` asserts the same before deleting rows — preventing the test suite from wiping dev data
+- `TEST_DATABASE_URL` moved to `.env.test` (template: `.env.test.example`) to dodge a Bun env-precedence quirk where `.env` would shadow it
 - `/llms.txt` reaches the live Elysia endpoint instead of being served as a static asset / SPA fallback
 - `appendHeader` added to the Vite dev middleware response shim (fixes `res.appendHeader is not a function`)
 
