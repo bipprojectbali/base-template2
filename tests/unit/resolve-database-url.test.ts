@@ -9,8 +9,14 @@ describe('resolveDatabaseUrl', () => {
     expect(resolveDatabaseUrl({ NODE_ENV: 'test', DATABASE_URL: DEV, TEST_DATABASE_URL: TEST })).toBe(TEST)
   })
 
-  test('falls back to DATABASE_URL in test mode when TEST_DATABASE_URL is unset', () => {
-    expect(resolveDatabaseUrl({ NODE_ENV: 'test', DATABASE_URL: DEV })).toBe(DEV)
+  test('throws in test mode when TEST_DATABASE_URL is unset (no silent fallback to dev DB)', () => {
+    expect(() => resolveDatabaseUrl({ NODE_ENV: 'test', DATABASE_URL: DEV })).toThrow(/TEST_DATABASE_URL is required/)
+  })
+
+  test('throws in test mode when TEST_DATABASE_URL equals DATABASE_URL', () => {
+    expect(() => resolveDatabaseUrl({ NODE_ENV: 'test', DATABASE_URL: DEV, TEST_DATABASE_URL: DEV })).toThrow(
+      /must point at a SEPARATE database/,
+    )
   })
 
   test('ignores TEST_DATABASE_URL outside test mode', () => {
