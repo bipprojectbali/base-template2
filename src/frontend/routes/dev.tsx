@@ -7,6 +7,7 @@ import {
   Group,
   Menu,
   NavLink,
+  ScrollArea,
   Stack,
   Text,
   ThemeIcon,
@@ -197,7 +198,7 @@ function DevPage() {
           </Group>
         </AppShell.Section>
 
-        <AppShell.Section grow>
+        <AppShell.Section grow component={ScrollArea}>
           {navItems.map((item) =>
             collapsed ? (
               <Tooltip key={item.key} label={item.label} position="right">
