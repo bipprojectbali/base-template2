@@ -42,6 +42,30 @@ bun run test:integration  # tests/integration/ — API via app.handle(), no serv
 
 Helpers in `tests/helpers.ts`: `createTestApp()`, `seedTestUser()`, `createTestSession()`, `cleanupTestData()`
 
+## UI Verification — agent-browser
+
+Untuk verifikasi tampilan UI (bukan sekadar unit test), gunakan **`agent-browser`**
+(CLI Rust dari vercel-labs, dirancang untuk AI agent — alur `snapshot` → ref `@e1`).
+Ini **bukan skill/MCP**, jadi tidak muncul di daftar tool sesi — panggil lewat Bash.
+
+> **Machine-specific.** Tool ini terpasang di mesin dev (npm `-g`), tidak dijamin
+> ada di CI atau mesin lain. **Selalu cek dulu**: `which agent-browser`. Kalau tidak
+> ada, jangan asumsikan — minta user atau pakai jalur verifikasi lain. Ingat aturan
+> global: hanya buka browser jika user eksplisit memintanya.
+
+```bash
+which agent-browser                                   # cek terpasang dulu
+agent-browser doctor                                  # cek daemon + Chrome
+agent-browser open http://localhost:3111/<path>       # buka (dev server: user yang kelola)
+agent-browser snapshot                                # accessibility tree + ref @e1, @e2...
+agent-browser click @e2                               # interaksi by ref (deterministik)
+agent-browser screenshot                              # tangkap tampilan
+agent-browser close
+```
+
+`/dev` & `/dashboard` butuh login. Untuk SUPER_ADMIN saat dev:
+`agent-browser open "http://localhost:3111/api/dev-auth/login-as/superadmin@example.com?redirect=/dev"`.
+
 ## Database
 
 ```bash
